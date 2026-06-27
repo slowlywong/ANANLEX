@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socratic Law Lab | Pro Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+<script>
+        const password = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานระบบติวข้อสอบ:");
+        if (password !== "67") {
+            alert("รหัสผ่านไม่ถูกต้อง!");
+            window.location.href = "https://www.google.com";
+        }
+    </script>
+<style>
+        :root {
+            --bg: #f4f7f9; --card-bg: #ffffff; --primary: #1a2a6c;
+            --secondary: #27ae60; --accent: #f39c12; --danger: #e74c3c;
+            --text-main: #2c3e50; --text-sub: #7f8c8d;
+            --shadow: 0 10px 30px rgba(0,0,0,0.08); --radius: 20px; --disabled: #e2e8f0;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a; --card-bg: #1e293b; --text-main: #f1f5f9;
+            --text-sub: #94a3b8; --primary: #38bdf8;
+            --shadow: 0 10px 30px rgba(0,0,0,0.3); --disabled: #334155;
+        }
+        body { font-family:'Sarabun',sans-serif; background:var(--bg); color:var(--text-main); margin:0; padding:20px; transition:all 0.3s; }
+        .container { max-width:600px; margin:0 auto; }
+        .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; }
+        .header h1 { font-size:1.4rem; font-weight:800; color:var(--primary); margin:0; }
+        .back-nav { cursor:pointer; color:var(--primary); font-weight:bold; margin-bottom:20px; display:inline-block; border:none; background:none; font-family:inherit; font-size:1rem; }
+        .screen { display:none; animation:fadeIn 0.4s ease; }
+        .active { display:block; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .menu-grid { display:grid; grid-template-columns:1fr; gap:15px; }
+        @media(min-width:800px){ .menu-grid{ grid-template-columns:repeat(2,1fr); } }
+        .main-btn { background:var(--card-bg); padding:25px; border-radius:var(--radius); box-shadow:var(--shadow); border:none; cursor:pointer; display:flex; align-items:center; text-align:left; width:100%; transition:transform 0.2s; color:var(--text-main); }
+        .main-btn:hover { transform:translateY(-5px); }
+        .icon-box { width:50px; height:50px; background:var(--bg); border-radius:12px; margin-right:20px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0; }
+        .content-block { background:var(--card-bg); border-radius:var(--radius); padding:25px; margin-bottom:20px; box-shadow:var(--shadow); }
+        .tag { display:inline-block; padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:bold; margin-bottom:10px; }
+        .tag-blue  { background:#e1f5fe; color:#0288d1; }
+        .tag-green { background:#e8f5e9; color:#2e7d32; }
+        .tag-orange { background:#fff3e0; color:#e65100; }
+        .tag-purple { background:#f3e5f5; color:#7b1fa2; }
+        .progress-container { width:100%; height:6px; background:#e2e8f0; border-radius:10px; margin-bottom:20px; }
+        .progress-bar { height:100%; background:var(--secondary); border-radius:10px; width:0%; transition:0.3s; }
+        .card-wrapper { min-height:420px; }
+
+        /* ===== FLASH CARD (หน้า1: มาตรา+ชื่อ+ตัวบท | หน้า2: องค์ประกอบ) ===== */
+        .flashcard {
+            background:var(--card-bg); border-radius:25px; box-shadow:var(--shadow);
+            padding:30px 35px; box-sizing:border-box; min-height:420px;
+            display:flex; flex-direction:column; cursor:pointer;
+        }
+        .fc-header {
+            display:flex; align-items:flex-start; gap:16px;
+            padding-bottom:18px; border-bottom:2px solid var(--disabled); margin-bottom:20px;
+        }
+        .fc-section-badge {
+            font-size:2rem; font-weight:900; color:var(--primary);
+            line-height:1; white-space:nowrap; font-family:'Inter',sans-serif;
+        }
+        .fc-title-area { flex:1; }
+        .fc-law-name { font-size:1.15rem; font-weight:700; color:var(--text-main); margin:0 0 4px; }
+        .fc-subtitle { font-size:0.8rem; color:var(--text-sub); margin:0; }
+        .fc-body { flex:1; }
+        .fc-body-text {
+            background:var(--bg); border-radius:12px; padding:16px 18px;
+            font-size:0.95rem; line-height:2; color:var(--text-main);
+            border-left:4px solid var(--primary);
+        }
+        .fc-elements { display:flex; flex-direction:column; gap:10px; }
+        .fc-elem-row {
+            display:flex; align-items:flex-start; gap:12px;
+            background:var(--bg); border-radius:10px; padding:12px 14px;
+        }
+        .fc-elem-num {
+            width:26px; height:26px; border-radius:50%; background:var(--primary);
+            color:#fff; font-size:0.8rem; font-weight:bold;
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+        .fc-elem-text { font-size:0.9rem; line-height:1.7; }
+        .fc-elem-label { font-weight:700; color:var(--primary); }
+        .fc-hint { text-align:center; margin-top:20px; font-size:0.8rem; color:var(--text-sub); }
+        .page-dot-row { display:flex; justify-content:center; gap:8px; margin-top:16px; }
+        .page-dot { width:8px; height:8px; border-radius:50%; background:var(--disabled); transition:0.3s; }
+        .page-dot.active { background:var(--primary); width:20px; border-radius:4px; }
+
+        /* ===== DEKA (ตัวบทย่อ + ข้อเท็จจริง + หลักศาล + quiz) ===== */
+        .deka-card { background:var(--card-bg); border-radius:var(--radius); padding:25px; box-shadow:var(--shadow); margin-bottom:16px; }
+        .deka-principle-box {
+            background:var(--bg); border-radius:12px; padding:14px 16px;
+            border-left:4px solid var(--accent); margin:14px 0;
+            font-size:0.9rem; line-height:1.8; font-style:italic; color:var(--text-main);
+        }
+        .deka-section-label { font-size:0.75rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.05em; margin:14px 0 6px; }
+        .quiz-question { font-weight:700; font-size:1rem; margin:10px 0 14px; line-height:1.6; }
+        .quiz-option {
+            display:block; width:100%; padding:13px 16px; margin:8px 0;
+            border:2px solid var(--disabled); border-radius:12px; text-align:left;
+            cursor:pointer; background:var(--card-bg); font-family:inherit;
+            color:var(--text-main); font-size:0.9rem; transition:all 0.2s; box-sizing:border-box;
+        }
+        .quiz-option:hover:not(:disabled) { border-color:var(--primary); background:var(--bg); }
+        .quiz-option.correct { border-color:var(--secondary)!important; background:#e8f5e9!important; color:#1b5e20!important; font-weight:bold; }
+        .quiz-option.wrong   { border-color:var(--danger)!important;     background:#fce4ec!important; color:#880e4f!important; }
+        .quiz-option:disabled { cursor:default; }
+        .quiz-result { margin-top:12px; padding:12px 16px; border-radius:10px; font-size:0.88rem; line-height:1.7; display:none; }
+        .quiz-result.show { display:block; }
+        .quiz-result.ok  { background:#e8f5e9; color:#1b5e20; border-left:4px solid var(--secondary); }
+        .quiz-result.no  { background:#fce4ec; color:#880e4f; border-left:4px solid var(--danger); }
+
+        /* ===== IRAC WRITING — คงไว้เดิม ไม่แก้ไข ===== */
+        .irac-input {
+            width:100%; height:260px; padding:15px; border-radius:12px;
+            border:2px solid #eee; font-family:'Sarabun'; font-size:1rem;
+            margin-top:10px; box-sizing:border-box;
+            background:var(--card-bg); color:var(--text-main); line-height:1.8; resize:vertical;
+        }
+        .btn { border:none; padding:15px; border-radius:15px; font-weight:bold; cursor:pointer; font-size:0.9rem; transition:0.3s; }
+        .btn-primary   { background:var(--primary); color:white; }
+        .btn-secondary { background:var(--disabled); color:var(--text-sub); }
+        .btn:disabled  { opacity:0.5; cursor:not-allowed; }
+        .score-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:0.88rem; }
+        .score-table th { background:var(--bg); padding:8px 12px; text-align:left; font-weight:700; }
+        .score-table td { padding:8px 12px; border-top:1px solid var(--disabled); vertical-align:top; }
+        .score-table .pts { text-align:right; font-weight:bold; white-space:nowrap; }
+        .pts-full{color:var(--secondary)} .pts-mid{color:var(--accent)} .pts-fail{color:var(--danger)}
+        .deka-ref { font-size:0.78rem; color:var(--text-sub); background:var(--bg); border-left:3px solid var(--primary); padding:8px 12px; border-radius:0 8px 8px 0; margin-top:10px; }
+        .criteria-box { background:var(--bg); border-radius:12px; padding:14px 18px; margin-bottom:16px; font-size:0.82rem; line-height:1.7; border-left:4px solid var(--primary); }
+        .criteria-box strong { color:var(--primary); }
+        .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:#fff; animation:spin 1s linear infinite; margin-right:8px; vertical-align:middle; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        #loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:999; }
+        .load-spinner { width:48px; height:48px; border:5px solid var(--disabled); border-top-color:var(--primary); border-radius:50%; animation:spin 0.9s linear infinite; }
+        .load-error { color:var(--danger); font-weight:bold; text-align:center; max-width:360px; line-height:1.8; }
+        .load-error code { display:block; background:var(--disabled); border-radius:8px; padding:8px 12px; font-size:0.8rem; margin-top:8px; color:var(--text-main); }
+        .retry-btn { padding:10px 28px; background:var(--primary); color:#fff; border:none; border-radius:12px; cursor:pointer; font-family:inherit; font-size:0.95rem; font-weight:bold; }
+    </style>
+</head>
+<body data-theme="light">
+
+<div id="loading-overlay">
+    <div class="load-spinner"></div>
+    <p id="load-msg" style="color:var(--text-sub);margin:0;">กำลังโหลด data.json …</p>
+</div>
+
+<div class="container" id="app" style="display:none;">
+
+    <div class="header">
+        <h1>⚖️ Socratic Law Lab</h1>
+        <button onclick="toggleTheme()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;" title="สลับธีม">🌓</button>
+    </div>
+
+    <section id="screen-category" class="screen active">
+        <h2>เลือกหมวดวิชากฎหมาย</h2>
+        <div class="menu-grid" id="category-grid"></div>
+    </section>
+
+    <section id="screen-home" class="screen">
+        <button class="back-nav" onclick="navTo('screen-category')">← เปลี่ยนหมวดวิชา</button>
+        <div id="home-content"></div>
+    </section>
+
+    <section id="screen-flash" class="screen">
+        <button class="back-nav" onclick="navTo('screen-home')">← กลับเมนูหลัก</button>
+        <div class="progress-container"><div id="pb" class="progress-bar"></div></div>
+        <div class="card-wrapper">
+            <div class="flashcard" id="flashcard-main" onclick="nextPage()">
+                <div id="card-content" style="white-space: pre-line; line-height: 1.6;"></div>
+            </div>
+        </div>
+        <div id="page-dots" class="page-dot-row"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px;">
+            <button id="prevBtn" class="btn btn-secondary" onclick="prevSection()">ย้อนกลับ</button>
+            <button class="btn btn-primary" style="background:var(--accent);" onclick="shuffleCards()">🔀 สุ่ม</button>
+            <button id="nextBtn" class="btn btn-primary" onclick="nextSection()">ถัดไป</button>
+            <div style="display:flex; gap:5px; justify-content:center; margin-top:10px;">
+    <button class="btn btn-secondary" onclick="changeFontSize(-0.1)" style="padding:5px 10px;">A -</button>
+    <button class="btn btn-secondary" onclick="changeFontSize(0.1)" style="padding:5px 10px;">A +</button>
+</div>
+        </div>
+    </section>
+
+    <section id="screen-deka-list" class="screen">
+        <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
+        <h2 id="deka-list-title" style="font-size:1.2rem;"></h2>
+        <div id="deka-items"></div>
+<div id="deka-content" style="white-space: pre-line; line-height: 1.6;"></div>
+    <section id="screen-deka-view" class="screen">
+        <button class="back-nav" onclick="navTo('screen-deka-list')">← กลับรายการ</button>
+        <div id="deka-content"></div>
+    </section>
+
+    <section id="screen-writing-list" class="screen">
+        <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
+        <h2 id="writing-list-title" style="font-size:1.2rem;"></h2>
+        <div id="writing-items"></div>
+    </section>
+
+    <section id="screen-writing-view" class="screen">
+        <button class="back-nav" onclick="navTo('screen-writing-list')">← กลับรายการ</button>
+        <div id="writing-content"></div>
+    </section>
+
+</div>
+
+<script>
+const QCE_CONFIG = {
+  issue: { maxPoints:4, triggerPhrases:["ประเด็น","มีประเด็น","ต้องพิจารณา","พิจารณาว่า","ต้องวินิจฉัย","วินิจฉัยว่า","ถามว่า","มีปัญหาว่า"], thFull:0.22, thHalf:0.08, scoreFull:4, scoreHalf:2, scoreNone:0 },
+  rule: { maxPoints:5, substancePhrases:["วางหลักว่า","บัญญัติว่า","กำหนดว่า","ระบุว่า","หมายความว่า","ซึ่งวางหลักว่า","วางหลักไว้ว่า","วรรคแรกวางหลัก","วรรคหนึ่งวางหลัก","วรรคสองวางหลัก"], thContent:0.15, scoreFull:5, scoreHalf:2, scoreNone:0 },
+  application: { maxPoints:7, thFull:0.25, thPartial:0.14, thMin:0.06, hedgePhrases:["น่าจะ","อาจจะ","คงจะ","เหมือนว่า","ดูเหมือน","คิดว่า","ไม่แน่ใจ"], scoreFull:7, scorePartial:4, scoreMin:2, scoreNone:0 },
+  conclusion: { maxPoints:4, verdictWords:["ผิดนัด","ต้องรับผิด","ไม่ต้องรับผิด","มีความผิด","ไม่มีความผิด","มีสิทธิ","ไม่มีสิทธิ","ตกเป็นโมฆะ","ตกเป็นโมฆียะ","ไม่ตกเป็นโมฆะ","บรรลุนิติภาวะ","ไม่บรรลุนิติภาวะ","ผิดฐาน","รับฟังได้","ฟังขึ้น","ฟังไม่ขึ้น","บอกเลิกสัญญา","เรียกค่าเสียหาย","ส่งมอบหนี้","ชำระหนี้"], thFull:0.20, thHalf:0.08, scoreFull:4, scoreHalf:2, scoreNone:0 },
+  feedback: {
+    issue: { full:"ตั้งประเด็นได้ตรงกับโจทย์และครบถ้วน", half:"ระบุประเด็นได้แต่ยังไม่ตรงหรือไม่ครบตามที่โจทย์ถาม", none:"ไม่พบการตั้งประเด็น หรือประเด็นไม่สัมพันธ์กับโจทย์" },
+    rule: { full:"อ้างมาตราถูกต้องและอธิบายเนื้อหากฎหมายครบถ้วนตามหลักการ", half:"มีเลขมาตราแต่ขาดการอธิบายเนื้อหา (เกณฑ์อาจารย์: อ้างแต่มาตราไม่อธิบายตัวบท ได้ไม่เกิน 2 คะแนน)", none:"ไม่พบการอ้างกฎหมาย หรืออ้างผิดมาตรา (ได้ 0 คะแนน)" },
+    application: { full:"การปรับบทสมบูรณ์: มีการดึงข้อเท็จจริงมาปรับเข้ากับองค์ประกอบและสรุปผลข้อเท็จจริง (Fact → Element → Result) ได้อย่างมีตรรกะ", partial:"วิเคราะห์แบบคำตอบไม่ครบ: มีการโยงตรรกะอยู่บ้างแต่ดึงข้อเท็จจริงจากโจทย์มาปรับใช้ไม่ครบถ้วน", min:"ตรรกะผิดพลาด/เบาบาง: คะแนน Reasoning ต่ำเนื่องจากการเชื่อมโยงกฎหมายกับข้อเท็จจริงไม่ชัดเจน", none:"ไม่พบการปรับใช้กฎหมาย หรือเขียนหลุดจากประเด็นข้อเท็จจริงของโจทย์", hedge:"⚠️ ตรวจพบคำลังเลในคำตอบ (น่าจะ/อาจจะ) — ตามเกณฑ์ อ.วัชรพล ศิริ: ท่อน Application ตัดเหลือ 0 คะแนนทันที" },
+    conclusion: { full:"สรุปผลฟันธงท้ายประโยคถูกต้องและตรงประเด็นตามเฉลยมาตรฐาน", half:"มีการสรุปผลฟันธง แต่การใช้คำสรุปยังไม่ชัดเจนหรือขาดรายละเอียดสำคัญ", none:"ไม่พบการสรุปผลฟันธง หรือผลสรุปขัดแย้งกับคำวินิจฉัย (ได้ 0 คะแนน)" }
+  },
+  criteriaHint: "ระบบตรวจด้วยเกณฑ์อาจารย์นิติศาสตร์ (อ.แก้ว มช. + อ.วัชรพล): ตรวจสอบลึกลงไปที่โครงสร้างตรรกะ (Logic & Reasoning) เลขมาตราต้องตรง มีตัวบทอธิบายประกอบ และห้ามมีคำลังเลในย่อหน้าปรับบทเด็ดขาด",
+  grades: [ { min:80, label:"ดีเยี่ยม ✨", color:"#27ae60" }, { min:60, label:"ผ่านเกณฑ์ ✅", color:"#2980b9" }, { min:40, label:"ต้องปรับปรุง ⚠️", color:"#f39c12" }, { min:0, label:"ต้องฝึกเพิ่ม ❌", color:"#e74c3c" } ]
+};
+
+let DATA           = {};
+let currentCat     = null;
+let currentCards   = [];
+let currentCardIdx = 0;
+let currentPageIdx = 0;
+
+async function loadData() {
+  try {
+    const res = await fetch("data.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ไม่พบไฟล์`);
+    const json = await res.json();
+    DATA = json.categories;
+    buildCategoryMenu();
+    document.getElementById("loading-overlay").style.display = "none";
+    document.getElementById("app").style.display = "block";
+  } catch (err) {
+    document.getElementById("loading-overlay").innerHTML = `
+      <div class="load-error">❌ โหลด data.json ไม่สำเร็จ<br>
+      <code>${err.message}</code>
+      ตรวจสอบว่า <b>data.json</b> อยู่ในโฟลเดอร์เดียวกับ HTML<br>
+      และเปิดผ่าน <b>Live Server</b> (Go Live) ใน VS Code</div>
+      <button class="retry-btn" onclick="location.reload()">🔄 ลองใหม่</button>`;
+  }
+}
+function buildCategoryMenu() {
+  document.getElementById("category-grid").innerHTML =
+    Object.entries(DATA).map(([key, cat]) => `
+      <button class="main-btn" onclick="selectCategory('${key}')">
+        <div class="icon-box">${cat.icon || "📚"}</div>
+        <div><h3 style="margin:0;">${cat.label}</h3></div>
+      </button>`).join("");
+}
+
+function navTo(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+function toggleTheme() {
+  document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
+}
+
+function selectCategory(key) {
+  currentCat = key;
+  const cat = DATA[key];
+  document.getElementById("home-content").innerHTML = `
+    <h2 style="margin-top:0;">${cat.label}</h2>
+    <div class="menu-grid">
+      <button class="main-btn" onclick="startFlash()">
+        <div class="icon-box">🗂️</div>
+        <div><h3 style="margin:0;">Flash Cards</h3>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${cat.flashCards.length} การ์ด</p></div>
+      </button>
+      <button class="main-btn" onclick="openDekaList()">
+        <div class="icon-box">📋</div>
+        <div><h3 style="margin:0;">ฎีกาสำคัญ</h3>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${cat.dekaList.length} เรื่อง</p></div>
+      </button>
+      <button class="main-btn" onclick="openWritingList()">
+        <div class="icon-box">✍️</div>
+        <div><h3 style="margin:0;">ฝึกวินิจฉัย (IRAC)</h3>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${cat.writingProblems.length} โจทย์</p></div>
+      </button>
+    </div>`;
+  navTo("screen-home");
+}
+
+function startFlash() {
+  currentCards   = [...DATA[currentCat].flashCards];
+  currentCardIdx = 0;
+  currentPageIdx = 0;
+  renderCard();
+  navTo("screen-flash");
+}
+
+function renderCard() {
+  const card  = currentCards[currentCardIdx];
+  const total = currentCards.length;
+
+  document.getElementById("pb").style.width = `${((currentCardIdx + 1) / total) * 100}%`;
+
+  const dotsEl = document.getElementById("page-dots");
+  dotsEl.innerHTML = card.pages.map((_, i) =>
+    `<div class="page-dot ${i === currentPageIdx ? 'active' : ''}"></div>`
+  ).join("");
+
+  document.getElementById("prevBtn").disabled = currentCardIdx === 0 && currentPageIdx === 0;
+  document.getElementById("nextBtn").textContent =
+    currentCardIdx === total - 1 && currentPageIdx === card.pages.length - 1 ? "จบ" : "ถัดไป";
+
+  const page = card.pages[currentPageIdx];
+  const contentEl = document.getElementById("card-content");
+
+  if (page.type === "law") {
+    contentEl.innerHTML = `
+      <div class="fc-header">
+        <div class="fc-section-badge">ม.${card.section}</div>
+        <div class="fc-title-area">
+          <p class="fc-law-name">${card.title}</p>
+          <p class="fc-subtitle">${card.category || ""} | การ์ด ${currentCardIdx + 1}/${total}</p>
+        </div>
+      </div>
+      <div class="fc-body">
+        <div class="fc-body-text">${page.content}</div>
+      </div>
+      <p class="fc-hint">👆 แตะเพื่อดูองค์ประกอบ</p>`;
+  } else if (page.type === "elements") {
+    contentEl.innerHTML = `
+      <div class="fc-header">
+        <div class="fc-section-badge">ม.${card.section}</div>
+        <div class="fc-title-area">
+          <p class="fc-law-name">องค์ประกอบของ ${card.title}</p>
+          <p class="fc-subtitle">การ์ด ${currentCardIdx + 1}/${total}</p>
+        </div>
+      </div>
+      <div class="fc-body">
+        <div class="fc-elements">
+          ${page.elements.map((el, i) => `
+            <div class="fc-elem-row">
+              <div class="fc-elem-num">${i + 1}</div>
+              <div class="fc-elem-text">
+                <span class="fc-elem-label">${el.label}</span><br>
+                <span style="color:var(--text-sub);font-size:0.85rem;">${el.detail}</span>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>
+      <p class="fc-hint">👆 แตะเพื่อไปการ์ดถัดไป</p>`;
+  }
+}
+
+function nextPage() {
+  const card = currentCards[currentCardIdx];
+  if (currentPageIdx < card.pages.length - 1) {
+    currentPageIdx++;
+    renderCard();
+  } else {
+    nextSection();
+  }
+}
+function nextSection() {
+  const card = currentCards[currentCardIdx];
+  if (currentPageIdx < card.pages.length - 1) { currentPageIdx++; renderCard(); }
+  else if (currentCardIdx < currentCards.length - 1) { currentCardIdx++; currentPageIdx = 0; renderCard(); }
+}
+function prevSection() {
+  if (currentPageIdx > 0) { currentPageIdx--; renderCard(); }
+  else if (currentCardIdx > 0) { currentCardIdx--; currentPageIdx = 0; renderCard(); }
+}
+function shuffleCards() {
+  currentCards = [...currentCards].sort(() => Math.random() - 0.5);
+  currentCardIdx = 0; currentPageIdx = 0;
+  renderCard();
+}
+
+function openDekaList() {
+  const cat = DATA[currentCat];
+  document.getElementById("deka-list-title").textContent = `ฎีกาสำคัญ — ${cat.label}`;
+  document.getElementById("deka-items").innerHTML = cat.dekaList.map((d, i) => `
+    <div class="content-block" style="cursor:pointer;" onclick="viewDeka(${i})">
+      <div style="font-weight:bold;">${d.title}</div>
+      <div style="margin-top:6px;">${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
+      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${d.principle}</div>
+    </div>`).join("");
+  navTo("screen-deka-list");
+}
+
+function viewDeka(i) {
+  const d = DATA[currentCat].dekaList[i];
+
+  const quizHtml = d.quiz ? `
+    <div class="deka-section-label">🧠 คำถามทดสอบความเข้าใจ</div>
+    <p class="quiz-question">${d.quiz.question}</p>
+    <div id="quiz-opts-${i}">
+      ${d.quiz.options.map((opt, oi) => `
+        <button class="quiz-option" onclick="answerQuiz(${i}, ${oi}, ${d.quiz.correct}, this)">
+          ${String.fromCharCode(65 + oi)}. ${opt}
+        </button>`).join("")}
+    </div>
+    <div id="quiz-result-${i}" class="quiz-result">
+      <strong id="quiz-result-title-${i}"></strong><br>
+      <span id="quiz-result-explain-${i}"></span>
+    </div>` : "";
+
+  document.getElementById("deka-content").innerHTML = `
+    <div class="deka-card">
+      <h2 style="margin-top:0;font-size:1.1rem;">${d.title}</h2>
+      <div>${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
+
+      <div class="deka-section-label">📜 ตัวบทย่อ</div>
+      <div class="deka-principle-box">${d.statute}</div>
+
+      <div class="deka-section-label">📁 ข้อเท็จจริง</div>
+      <p style="font-size:0.9rem;line-height:1.8;margin:6px 0 0;">${d.facts}</p>
+
+      <div class="deka-section-label">⚖️ หลักที่ศาลวินิจฉัย</div>
+      <p style="font-size:0.9rem;line-height:1.8;margin:6px 0 0;">${d.holding}</p>
+
+      <div class="deka-ref">📌 หลักการสำคัญ: ${d.principle}</div>
+
+      ${quizHtml}
+    </div>`;
+  navTo("screen-deka-view");
+}
+
+function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
+  const container = document.getElementById(`quiz-opts-${dekaIdx}`);
+  container.querySelectorAll(".quiz-option").forEach((el, oi) => {
+    el.disabled = true;
+    if (oi === correctIdx) el.classList.add("correct");
+    else if (oi === chosenIdx) el.classList.add("wrong");
+  });
+
+  const d = DATA[currentCat].dekaList[dekaIdx];
+  const isCorrect = chosenIdx === correctIdx;
+  const resultEl  = document.getElementById(`quiz-result-${dekaIdx}`);
+  const titleEl   = document.getElementById(`quiz-result-title-${dekaIdx}`);
+  const explainEl = document.getElementById(`quiz-result-explain-${dekaIdx}`);
+
+  titleEl.textContent   = isCorrect ? "✅ ถูกต้อง!" : "❌ ไม่ถูกต้อง";
+  explainEl.textContent = d.quiz.explanation;
+  resultEl.classList.add("show", isCorrect ? "ok" : "no");
+}
+
+function openWritingList() {
+  const cat = DATA[currentCat];
+  document.getElementById("writing-list-title").textContent = `โจทย์ฝึกวินิจฉัย — ${cat.label}`;
+  document.getElementById("writing-items").innerHTML = cat.writingProblems.map((w, i) => `
+    <div class="content-block" style="cursor:pointer;" onclick="openWriting(${i})">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b>${w.title}</b><span class="tag tag-green">${w.difficulty}</span>
+      </div>
+      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${w.problem.substring(0, 90)}…</div>
+    </div>`).join("");
+  navTo("screen-writing-list");
+}
+
+function openWriting(i) {
+  const w   = DATA[currentCat].writingProblems[i];
+  const cfg = QCE_CONFIG;
+  document.getElementById("writing-content").innerHTML = `
+    <div class="content-block">
+      <span class="tag tag-green">${w.difficulty}</span>
+      <h3 style="margin-top:8px;">${w.title}</h3>
+      <p style="line-height:1.9;background:var(--bg);padding:14px;border-radius:12px;">${w.problem}</p>
+      <div class="criteria-box">
+        <strong>เกณฑ์การให้คะแนน (IRAC)</strong><br>
+        🔵 Issue = ${cfg.issue.maxPoints} คะแนน &nbsp;|&nbsp;
+        🟢 Rule (มาตรา + เนื้อหา) = ${cfg.rule.maxPoints} คะแนน<br>
+        🟡 Application (ผูก fact→element→result) = ${cfg.application.maxPoints} คะแนน &nbsp;|&nbsp;
+        🔴 Conclusion = ${cfg.conclusion.maxPoints} คะแนน<br>
+        <small>⚠️ คะแนนเทียบกับเฉลยและโจทย์ | พบคำลังเล = Application 0 คะแนน</small>
+      </div>
+      <label style="font-weight:bold;">เขียนคำตอบของคุณ</label>
+      <textarea id="answer-input" class="irac-input"
+        placeholder="กรณีตามปัญหา มีประเด็นต้องพิจารณาเรื่อง...&#10;หลักกฎหมายตาม ป.พ.พ. มาตรา ... วางหลักว่า...&#10;ข้อเท็จจริงตามปัญหา ... (ข้อเท็จจริง) ... (องค์ประกอบ) ... (ผล)&#10;ด้วยเหตุผลดังที่วินิจฉัยมาแล้ว..."></textarea>
+      <div style="margin-top:12px;">
+        <button class="btn btn-primary" style="width:100%;" id="submit-btn" onclick="submitAnswer(${i})">
+          ส่งคำตอบ &amp; ประเมินผล
+        </button>
+      </div>
+      <div id="score-result"></div>
+      <div id="model-answer-section"></div>
+    </div>`;
+  navTo("screen-writing-view");
+}
+
+async function submitAnswer(i) {
+  const text = document.getElementById("answer-input").value.trim();
+  if (text.length < 20) { alert("กรุณาเขียนคำตอบให้มีความยาวอย่างน้อย 20 ตัวอักษร"); return; }
+  const btn = document.getElementById("submit-btn");
+  btn.innerHTML = '<span class="spinner"></span> กำลังประเมินผล…';
+  btn.disabled  = true;
+  try {
+    const w      = DATA[currentCat].writingProblems[i];
+    const result = await scoreTextWithModel(text, w.problem, w.modelAnswer);
+    document.getElementById("score-result").innerHTML = renderScoreResult(result);
+    const ma = w.modelAnswer;
+    document.getElementById("model-answer-section").innerHTML = `
+      <div class="content-block" style="margin-top:16px;border-top:3px solid var(--primary);">
+        <h3 style="margin-top:0;">📖 เฉลยแนวคำตอบ</h3>
+        <span class="tag tag-blue">Issue</span><p style="margin:4px 0 12px;">${ma.issue}</p>
+        <span class="tag tag-blue">Rule</span><p style="margin:4px 0 12px;">${ma.rule}</p>
+        <span class="tag tag-blue">Application</span><p style="margin:4px 0 12px;line-height:1.9;">${ma.application}</p>
+        <span class="tag tag-blue">Conclusion</span><p style="margin:4px 0;">${ma.conclusion}</p>
+      </div>`;
+  } catch (err) {
+    console.error(err);
+    alert("เกิดข้อผิดพลาดในการประเมินผล กรุณาลองใหม่อีกครั้ง");
+  } finally {
+    btn.innerHTML = "ส่งคำตอบ &amp; ประเมินผล";
+    btn.disabled  = false;
+    document.getElementById("score-result").scrollIntoView({ behavior:"smooth", block:"start" });
+  }
+}
+
+async function gptExtractFacts(answer, problem) {
+  const prompt = `คุณคือผู้ช่วยอาจารย์นิติศาสตร์ ทำหน้าที่ดึง "ข้อเท็จจริงสำคัญ"
+
+[โจทย์] ${problem}
+[คำตอบนักศึกษา] ${answer}
+
+OUTPUT JSON เท่านั้น:
+{"problemFacts":[],"answerFacts":[],"matchedFacts":[],"missingFacts":[],"factMatchScore":0.5,"analysis":""}`;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, messages:[{role:"user",content:prompt}] })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const raw  = data.content.map(c=>c.text||"").join("").replace(/```json|```/g,"").trim();
+    return JSON.parse(raw);
+  } catch {
+    return { problemFacts:[], answerFacts:[], matchedFacts:[], missingFacts:[], factMatchScore:0.5, analysis:"ไม่สามารถเรียก AI ได้" };
+  }
+}
+
+function tokenize(text) {
+  const t = text.toLowerCase().replace(/[^\u0E00-\u0E7Fa-z0-9\s]/g," ").trim();
+  const words = t.split(/\s+/).filter(w=>w.length>=2);
+  const bigrams = [];
+  for(const w of words) for(let j=0;j<w.length-1;j++) bigrams.push(w[j]+w[j+1]);
+  return [...words,...bigrams];
+}
+function similarity(a,b) {
+  if(!a||!b) return 0;
+  const ta=new Set(tokenize(a)), tb=new Set(tokenize(b));
+  if(ta.size===0||tb.size===0) return 0;
+  let inter=0; ta.forEach(t=>{if(tb.has(t))inter++;});
+  return inter/(ta.size+tb.size-inter);
+}
+function extractSectionNumbers(text) {
+  const nums=new Set();
+  [/มาตรา\s*(\d+)/g,/ม\.\s*(\d+)/g].forEach(re=>{
+    const r=new RegExp(re.source,"g"); let m;
+    while((m=r.exec(text))!==null) nums.add(m[1]);
+  });
+  return nums;
+}
+function extractVerdictFromModel(mc) {
+  return QCE_CONFIG.conclusion.verdictWords.filter(v=>mc.includes(v));
+}
+function splitZones(text) {
+  const lines=text.split(/\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  const BOUNDARIES=[
+    {zone:"issue",order:1,patterns:[/ประเด็น/,/มีประเด็นต้องพิจารณา/,/issue/i]},
+    {zone:"rule", order:2,patterns:[/หลักกฎหมาย/,/ป\.พ\.พ\.\s*มาตรา/,/มาตรา\s*\d+.*วางหลักว่า/,/ตาม ป\.พ\.พ\./,/มาตรา\s*\d+/,/rule\b/i]},
+    {zone:"app",  order:3,patterns:[/ข้อเท็จจริงตามปัญหา/,/ตามข้อเท็จจริง/,/ปรับใช้/,/วินิจฉัย/,/application\b/i,/กรณีตามปัญหา/,/เมื่อพิจารณา/]},
+    {zone:"con",  order:4,patterns:[/ด้วยเหตุผลดังที่วินิจฉัย/,/สรุป/,/โดยสรุป/,/ดังนั้น/,/conclusion/i]}
+  ];
+  function detectZone(line,curOrd) {
+    for(const b of BOUNDARIES) if(b.order>=curOrd&&b.patterns.some(re=>re.test(line))) return b;
+    return null;
+  }
+  const zones={issue:[],rule:[],app:[],con:[]};
+  let curZone="issue",curOrd=1;
+  for(const line of lines) {
+    const d=detectZone(line,curOrd);
+    if(d&&!(d.zone==="con"&&curZone==="app"&&line.length>60)){curZone=d.zone;curOrd=d.order;}
+    zones[curZone].push(line);
+  }
+  if(zones.app.length===0&&zones.con.length===0&&lines.length>=3)
+    return {issueText:lines[0]||"",ruleText:lines[1]||"",appText:lines.slice(2,lines.length-1).join("\n")||"",conText:lines[lines.length-1]||"",fullText:text};
+  return {issueText:zones.issue.join("\n"),ruleText:zones.rule.join("\n"),appText:zones.app.join("\n"),conText:zones.con.join("\n"),fullText:text};
+}
+
+async function scoreTextWithModel(text, problem, modelAnswer) {
+  const Z=splitZones(text), cfg=QCE_CONFIG;
+  const hasAny=(src,arr)=>arr.some(k=>src.toLowerCase().includes(k.toLowerCase()));
+  let teacherAdvice=[], teacherMistakes=[];
+
+  const ci=cfg.issue;
+  const issueSrc=Z.issueText.length>5?Z.issueText:Z.fullText.substring(0,Math.ceil(Z.fullText.length*0.20));
+  const hasTrig=hasAny(issueSrc,ci.triggerPhrases)||issueSrc.includes("หรือไม่");
+  const issueSim=similarity(issueSrc,modelAnswer.issue);
+  let iScore=ci.scoreNone;
+  if(hasTrig){ if(issueSim>=ci.thFull)iScore=ci.scoreFull; else if(issueSim>=ci.thHalf||issueSrc.length>10){iScore=ci.scoreHalf;teacherAdvice.push("ควรตั้งประเด็นให้กระชับและตรงคำถามมากกว่านี้");} }
+  else teacherMistakes.push("ไม่พบการตั้งประเด็น หรือไม่มี Keyword บังคับ");
+  const iFB=iScore===ci.scoreFull?cfg.feedback.issue.full:iScore>0?cfg.feedback.issue.half:cfg.feedback.issue.none;
+
+  const cr=cfg.rule;
+  const modelSecs=extractSectionNumbers(modelAnswer.rule), userSecs=extractSectionNumbers(Z.fullText);
+  const matchSecs=[...modelSecs].filter(n=>userSecs.has(n));
+  const hasCorrectSec=matchSecs.length>0;
+  const ruleSrc=Z.ruleText.length>15?Z.ruleText:Z.fullText;
+  const ruleSimModel=similarity(ruleSrc,modelAnswer.rule);
+  const hasSubstance=ruleSrc.length>25&&(hasAny(ruleSrc,cr.substancePhrases)||ruleSimModel>=cr.thContent);
+  let rScore=cr.scoreNone;
+  if(hasCorrectSec){ if(hasSubstance)rScore=(matchSecs.length===modelSecs.size)?cr.scoreFull:cr.scoreHalf+1; else{rScore=cr.scoreHalf;teacherMistakes.push("อ้างเพียงเลขมาตรา แต่ไม่อธิบายเนื้อหาตัวบท");teacherAdvice.push("ต้องอธิบายองค์ประกอบตัวบทหลังเลขมาตราเสมอ");} }
+  else teacherMistakes.push("อ้างอิงเลขมาตราไม่ถูกต้อง หรือไม่พบมาตราที่ตรงกับเฉลย");
+  const rFB=rScore===cr.scoreFull?cfg.feedback.rule.full:rScore>0?cfg.feedback.rule.half:cfg.feedback.rule.none;
+  const ruleDebug={modelSecs:[...modelSecs].join(",")||"-",userSecs:[...userSecs].join(",")||"-",simModel:ruleSimModel.toFixed(3),hasSubstance};
+
+  const ca=cfg.application;
+  const hasHedge=hasAny(Z.appText.length>10?Z.appText:Z.fullText,ca.hedgePhrases);
+  const appHasZone=Z.appText.trim().length>=30;
+  const appSrc=appHasZone?Z.appText:"";
+  let aScore=ca.scoreNone, aFB=cfg.feedback.application.none, appDebug;
+  if(hasHedge){
+    aScore=ca.scoreNone; aFB=cfg.feedback.application.hedge;
+    teacherMistakes.push("พบคำลังเล (น่าจะ/อาจจะ) ในพาร์ทวินิจฉัย — ตัดเป็น 0 คะแนนทันที");
+    appDebug={sim:0,factMatch:"0.000",hedgeFound:true,hasZone:appHasZone};
+  } else if(!appHasZone||appSrc.length===0){
+    teacherMistakes.push("ไม่พบส่วน Application หรือสั้นเกินไป");
+    appDebug={sim:"0.000",simEff:"0.000",factMatch:"0.000",hasZone:false};
+  } else {
+    const appSim=similarity(appSrc,modelAnswer.application);
+    const factAI=await gptExtractFacts(appSrc,problem);
+    const factMatchRatio=factAI.factMatchScore, hasFactMatch=factMatchRatio>=0.35;
+    if(appSim>=ca.thFull&&hasFactMatch){aScore=ca.scoreFull;aFB=cfg.feedback.application.full;}
+    else if(appSim>=ca.thFull||appSim>=ca.thPartial){
+      aScore=ca.scorePartial;aFB=cfg.feedback.application.partial;
+      if(!hasFactMatch){teacherMistakes.push(`ขาด fact สำคัญ: ${factAI.missingFacts.slice(0,2).join(", ")}`);teacherAdvice.push(`[AI]: ${factAI.analysis}`);}
+    } else if(appSim>=ca.thMin&&hasFactMatch){aScore=ca.scoreMin;aFB=cfg.feedback.application.min;}
+    else{aScore=ca.scoreNone;aFB=cfg.feedback.application.none;}
+    appDebug={sim:appSim.toFixed(3),simEff:appSim.toFixed(3),factMatch:factMatchRatio.toFixed(3),hasZone:true};
+  }
+
+  const cc=cfg.conclusion;
+  const modelVerds=extractVerdictFromModel(modelAnswer.conclusion);
+  const conHasZone=Z.conText.trim().length>3, conSrc=conHasZone?Z.conText:"";
+  let cScore=cc.scoreNone, conSim=0, verdictHit=false;
+  if(conHasZone&&conSrc.length>0){
+    conSim=similarity(conSrc,modelAnswer.conclusion);
+    verdictHit=hasAny(conSrc,cc.verdictWords)||modelVerds.some(v=>conSrc.includes(v));
+    if(verdictHit&&conSim>=cc.thFull)cScore=cc.scoreFull;
+    else if(verdictHit||conSim>=cc.thHalf){cScore=cc.scoreHalf;teacherAdvice.push("สรุปตอนท้ายควรฟันธงให้ชัดเจนเด็ดขาด");}
+    else{cScore=cc.scoreNone;teacherMistakes.push("สรุปผลฟันธงไม่ตรงตามหลักคำตอบ");}
+  } else teacherMistakes.push("ไม่เขียนย่อหน้าสรุปผล (Conclusion) ท้ายคำตอบ");
+  const cFB=cScore===cc.scoreFull?cfg.feedback.conclusion.full:cScore>0?cfg.feedback.conclusion.half:cfg.feedback.conclusion.none;
+
+  const totalScore=iScore+rScore+aScore+cScore, maxTotal=ci.maxPoints+cr.maxPoints+ca.maxPoints+cc.maxPoints;
+  const pct=Math.round((totalScore/maxTotal)*100);
+  let finalGrade=cfg.grades[cfg.grades.length-1];
+  for(const g of cfg.grades){if(pct>=g.min){finalGrade=g;break;}}
+  if(teacherMistakes.length===0) teacherMistakes.push("ไม่พบข้อผิดพลาดร้ายแรง เขียนได้ดีมาก");
+  if(teacherAdvice.length===0) teacherAdvice.push("รักษามาตรฐานการเขียนแบบนี้ไว้เพื่อเตรียมสอบสนามจริง");
+
+  return {
+    totalScore, maxTotal, pct, grade:finalGrade,
+    teacherReview:{mistakes:teacherMistakes.slice(0,3), advice:teacherAdvice.join(" ")},
+    breakdown:{
+      issue:{score:iScore,max:ci.maxPoints,fb:iFB},
+      rule:{score:rScore,max:cr.maxPoints,fb:rFB,debug:ruleDebug},
+      application:{score:aScore,max:ca.maxPoints,fb:aFB,debug:appDebug},
+      conclusion:{score:cScore,max:cc.maxPoints,fb:cFB,debug:{sim:conSim.toFixed(3),hit:verdictHit}}
+    }
+  };
+}
+
+function renderScoreResult(R) {
+  const B=R.breakdown, TR=R.teacherReview;
+  const getClr=(s,m)=>s===m?"pts-full":s>0?"pts-mid":"pts-fail";
+  return `
+    <div class="content-block" style="margin-top:20px;border:2px solid ${R.grade.color};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="margin:0;">👨‍⚖️ ผลการประเมิน</h3>
+        <span style="font-size:1.1rem;font-weight:bold;color:${R.grade.color};">${R.grade.label} (${R.pct}%)</span>
+      </div>
+      <div style="font-size:1.6rem;font-weight:800;text-align:center;margin:15px 0;color:var(--primary);">
+        ${R.totalScore} / ${R.maxTotal} <span style="font-size:1rem;font-weight:normal;color:var(--text-sub);">คะแนน</span>
+      </div>
+      <table class="score-table">
+        <thead><tr><th>หมวด IRAC</th><th style="text-align:right;">คะแนน</th></tr></thead>
+        <tbody>
+          <tr><td><b>🔵 Issue</b><br><small style="color:var(--text-sub);">${B.issue.fb}</small></td>
+              <td class="pts ${getClr(B.issue.score,B.issue.max)}">${B.issue.score}/${B.issue.max}</td></tr>
+          <tr><td><b>🟢 Rule</b><br><small style="color:var(--text-sub);">${B.rule.fb}</small><br>
+              <small style="font-size:0.72rem;color:var(--text-sub);">[มาตราเฉลย:${B.rule.debug.modelSecs} | พบ:${B.rule.debug.userSecs} | ตัวบท:${B.rule.debug.hasSubstance}]</small></td>
+              <td class="pts ${getClr(B.rule.score,B.rule.max)}">${B.rule.score}/${B.rule.max}</td></tr>
+          <tr><td><b>🟡 Application</b><br><small style="color:var(--text-sub);">${B.application.fb}</small><br>
+              <small style="font-size:0.72rem;color:var(--text-sub);">[Fact AI:${Math.round(B.application.debug.factMatch*100)}% | Logic:${B.application.debug.simEff}]</small></td>
+              <td class="pts ${getClr(B.application.score,B.application.max)}">${B.application.score}/${B.application.max}</td></tr>
+          <tr><td><b>🔴 Conclusion</b><br><small style="color:var(--text-sub);">${B.conclusion.fb}</small><br>
+              <small style="font-size:0.72rem;color:var(--text-sub);">[คำฟันธง:${B.conclusion.debug.hit?"พบ":"ไม่พบ"}]</small></td>
+              <td class="pts ${getClr(B.conclusion.score,B.conclusion.max)}">${B.conclusion.score}/${B.conclusion.max}</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:15px;padding:12px;background:var(--bg);border-left:4px solid #e74c3c;border-radius:4px;">
+        <strong style="color:#c0392b;">❌ จุดบกพร่องที่ตรวจพบ:</strong>
+        <ul style="margin:6px 0 0 18px;padding:0;font-size:0.85rem;line-height:1.5;">
+          ${TR.mistakes.map(m=>`<li>${m}</li>`).join("")}
+        </ul>
+      </div>
+      <div style="margin-top:10px;padding:12px;background:var(--bg);border-left:4px solid #3498db;border-radius:4px;">
+        <strong style="color:#2980b9;">💡 คำแนะนำ:</strong>
+        <p style="margin:5px 0 0;font-size:0.85rem;line-height:1.5;">${TR.advice}</p>
+      </div>
+      <div style="margin-top:14px;font-size:0.75rem;color:var(--text-sub);background:var(--bg);padding:8px;border-radius:6px;">
+        💡 <b>เกณฑ์:</b> ${QCE_CONFIG.criteriaHint}
+      </div>
+}
+    </div>`;
+}
+
+window.addEventListener("DOMContentLoaded", loadData);
+// 1. ประกาศตัวแปรเก็บสถานะขนาดฟอนต์ไว้ในระดับ Global
+// ประกาศตัวแปรเก็บขนาดฟอนต์ไว้ในระบบ
+let currentFontSize = 1.15; 
+
+// สร้างกฎเหล็ก CSS ฝังเข้าไปในระบบตั้งแต่เปิดแอป เพื่อคุมไม่ให้หน้าถัดไปล้างสไตล์ฟอนต์ของเรา
+const styleStyle = document.createElement('style');
+styleStyle.innerHTML = `
+    #card-content, #card-content *, #deka-content, #deka-content * {
+        font-size: var(--card-font-size, 1.15rem) !important;
+    }
+`;
+document.head.appendChild(styleStyle);
+
+// ฟังก์ชันสำหรับกดปุ่มลด-ขยาย (ที่ปุ่มของคุณเรียกใช้)
+function changeFontSize(delta) {
+    currentFontSize += delta;
+    // ล็อกขอบเขตไม่ให้เล็กหรือใหญ่เกินไป
+    if (currentFontSize < 0.9) currentFontSize = 0.9;
+    if (currentFontSize > 1.6) currentFontSize = 1.6;
+    
+    // ยิงค่าไปเปลี่ยนที่กล่องใหญ่สุด (#app) ซึ่งไม่เคยถูกลบเวลาเปลี่ยนหน้า
+    const appContainer = document.getElementById('app');
+    if (appContainer) {
+        appContainer.style.setProperty('--card-font-size', currentFontSize + 'rem');
+    }
+}
+</script>
+</body>
+</html>
