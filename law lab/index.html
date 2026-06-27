@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socratic Law Lab | Pro Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
-<script>
+    <script>
         const password = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานระบบติวข้อสอบ:");
         if (password !== "67") {
             alert("รหัสผ่านไม่ถูกต้อง!");
             window.location.href = "https://www.google.com";
         }
     </script>
-<style>
+    <style>
         :root {
             --bg: #f4f7f9; --card-bg: #ffffff; --primary: #1a2a6c;
             --secondary: #27ae60; --accent: #f39c12; --danger: #e74c3c;
@@ -47,7 +47,7 @@
         .progress-bar { height:100%; background:var(--secondary); border-radius:10px; width:0%; transition:0.3s; }
         .card-wrapper { min-height:420px; }
 
-        /* ===== FLASH CARD (หน้า1: มาตรา+ชื่อ+ตัวบท | หน้า2: องค์ประกอบ) ===== */
+        /* ===== FLASH CARD ===== */
         .flashcard {
             background:var(--card-bg); border-radius:25px; box-shadow:var(--shadow);
             padding:30px 35px; box-sizing:border-box; min-height:420px;
@@ -87,7 +87,7 @@
         .page-dot { width:8px; height:8px; border-radius:50%; background:var(--disabled); transition:0.3s; }
         .page-dot.active { background:var(--primary); width:20px; border-radius:4px; }
 
-        /* ===== DEKA (ตัวบทย่อ + ข้อเท็จจริง + หลักศาล + quiz) ===== */
+        /* ===== DEKA ===== */
         .deka-card { background:var(--card-bg); border-radius:var(--radius); padding:25px; box-shadow:var(--shadow); margin-bottom:16px; }
         .deka-principle-box {
             background:var(--bg); border-radius:12px; padding:14px 16px;
@@ -104,14 +104,14 @@
         }
         .quiz-option:hover:not(:disabled) { border-color:var(--primary); background:var(--bg); }
         .quiz-option.correct { border-color:var(--secondary)!important; background:#e8f5e9!important; color:#1b5e20!important; font-weight:bold; }
-        .quiz-option.wrong   { border-color:var(--danger)!important;     background:#fce4ec!important; color:#880e4f!important; }
+        .quiz-option.wrong   { border-color:var(--danger)!important; background:#fce4ec!important; color:#880e4f!important; }
         .quiz-option:disabled { cursor:default; }
         .quiz-result { margin-top:12px; padding:12px 16px; border-radius:10px; font-size:0.88rem; line-height:1.7; display:none; }
         .quiz-result.show { display:block; }
         .quiz-result.ok  { background:#e8f5e9; color:#1b5e20; border-left:4px solid var(--secondary); }
         .quiz-result.no  { background:#fce4ec; color:#880e4f; border-left:4px solid var(--danger); }
 
-        /* ===== IRAC WRITING — คงไว้เดิม ไม่แก้ไข ===== */
+        /* ===== IRAC WRITING ===== */
         .irac-input {
             width:100%; height:260px; padding:15px; border-radius:12px;
             border:2px solid #eee; font-family:'Sarabun'; font-size:1rem;
@@ -154,22 +154,25 @@
         <button onclick="toggleTheme()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;" title="สลับธีม">🌓</button>
     </div>
 
+    <!-- SCREEN: เลือกหมวด -->
     <section id="screen-category" class="screen active">
         <h2>เลือกหมวดวิชากฎหมาย</h2>
         <div class="menu-grid" id="category-grid"></div>
     </section>
 
+    <!-- SCREEN: เมนูหลักหมวด -->
     <section id="screen-home" class="screen">
         <button class="back-nav" onclick="navTo('screen-category')">← เปลี่ยนหมวดวิชา</button>
         <div id="home-content"></div>
     </section>
 
+    <!-- SCREEN: Flash Card -->
     <section id="screen-flash" class="screen">
         <button class="back-nav" onclick="navTo('screen-home')">← กลับเมนูหลัก</button>
         <div class="progress-container"><div id="pb" class="progress-bar"></div></div>
         <div class="card-wrapper">
             <div class="flashcard" id="flashcard-main" onclick="nextPage()">
-                <div id="card-content" style="white-space: pre-line; line-height: 1.6;"></div>
+                <div id="card-content"></div>
             </div>
         </div>
         <div id="page-dots" class="page-dot-row"></div>
@@ -177,29 +180,34 @@
             <button id="prevBtn" class="btn btn-secondary" onclick="prevSection()">ย้อนกลับ</button>
             <button class="btn btn-primary" style="background:var(--accent);" onclick="shuffleCards()">🔀 สุ่ม</button>
             <button id="nextBtn" class="btn btn-primary" onclick="nextSection()">ถัดไป</button>
-            <div style="display:flex; gap:5px; justify-content:center; margin-top:10px;">
-    <button class="btn btn-secondary" onclick="changeFontSize(-0.1)" style="padding:5px 10px;">A -</button>
-    <button class="btn btn-secondary" onclick="changeFontSize(0.1)" style="padding:5px 10px;">A +</button>
-</div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+            <button class="btn btn-secondary" onclick="changeFontSize(-0.1)" style="padding:8px 16px;">A−</button>
+            <button class="btn btn-secondary" onclick="changeFontSize(0.1)"  style="padding:8px 16px;">A+</button>
         </div>
     </section>
 
+    <!-- SCREEN: รายการ Deka -->
     <section id="screen-deka-list" class="screen">
         <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
         <h2 id="deka-list-title" style="font-size:1.2rem;"></h2>
         <div id="deka-items"></div>
-<div id="deka-content" style="white-space: pre-line; line-height: 1.6;"></div>
+    </section>
+
+    <!-- SCREEN: ดู Deka รายชิ้น -->
     <section id="screen-deka-view" class="screen">
         <button class="back-nav" onclick="navTo('screen-deka-list')">← กลับรายการ</button>
         <div id="deka-content"></div>
     </section>
 
+    <!-- SCREEN: รายการ Writing -->
     <section id="screen-writing-list" class="screen">
         <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
         <h2 id="writing-list-title" style="font-size:1.2rem;"></h2>
         <div id="writing-items"></div>
     </section>
 
+    <!-- SCREEN: ฝึกเขียน Writing -->
     <section id="screen-writing-view" class="screen">
         <button class="back-nav" onclick="navTo('screen-writing-list')">← กลับรายการ</button>
         <div id="writing-content"></div>
@@ -208,6 +216,9 @@
 </div>
 
 <script>
+/* ============================================================
+   QCE_CONFIG
+   ============================================================ */
 const QCE_CONFIG = {
   issue: { maxPoints:4, triggerPhrases:["ประเด็น","มีประเด็น","ต้องพิจารณา","พิจารณาว่า","ต้องวินิจฉัย","วินิจฉัยว่า","ถามว่า","มีปัญหาว่า"], thFull:0.22, thHalf:0.08, scoreFull:4, scoreHalf:2, scoreNone:0 },
   rule: { maxPoints:5, substancePhrases:["วางหลักว่า","บัญญัติว่า","กำหนดว่า","ระบุว่า","หมายความว่า","ซึ่งวางหลักว่า","วางหลักไว้ว่า","วรรคแรกวางหลัก","วรรคหนึ่งวางหลัก","วรรคสองวางหลัก"], thContent:0.15, scoreFull:5, scoreHalf:2, scoreNone:0 },
@@ -223,12 +234,19 @@ const QCE_CONFIG = {
   grades: [ { min:80, label:"ดีเยี่ยม ✨", color:"#27ae60" }, { min:60, label:"ผ่านเกณฑ์ ✅", color:"#2980b9" }, { min:40, label:"ต้องปรับปรุง ⚠️", color:"#f39c12" }, { min:0, label:"ต้องฝึกเพิ่ม ❌", color:"#e74c3c" } ]
 };
 
+/* ============================================================
+   STATE
+   ============================================================ */
 let DATA           = {};
 let currentCat     = null;
 let currentCards   = [];
 let currentCardIdx = 0;
 let currentPageIdx = 0;
+let currentFontSize = 1.0;
 
+/* ============================================================
+   BOOT
+   ============================================================ */
 async function loadData() {
   try {
     const res = await fetch("data.json");
@@ -247,6 +265,7 @@ async function loadData() {
       <button class="retry-btn" onclick="location.reload()">🔄 ลองใหม่</button>`;
   }
 }
+
 function buildCategoryMenu() {
   document.getElementById("category-grid").innerHTML =
     Object.entries(DATA).map(([key, cat]) => `
@@ -256,6 +275,9 @@ function buildCategoryMenu() {
       </button>`).join("");
 }
 
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
 function navTo(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
@@ -265,6 +287,19 @@ function toggleTheme() {
   document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
 }
 
+/* ============================================================
+   FONT SIZE
+   ============================================================ */
+function changeFontSize(delta) {
+  currentFontSize += delta;
+  if (currentFontSize < 0.8) currentFontSize = 0.8;
+  if (currentFontSize > 1.6) currentFontSize = 1.6;
+  document.getElementById("app").style.fontSize = currentFontSize + "rem";
+}
+
+/* ============================================================
+   CATEGORY
+   ============================================================ */
 function selectCategory(key) {
   currentCat = key;
   const cat = DATA[key];
@@ -290,6 +325,9 @@ function selectCategory(key) {
   navTo("screen-home");
 }
 
+/* ============================================================
+   FLASH CARDS
+   ============================================================ */
 function startFlash() {
   currentCards   = [...DATA[currentCat].flashCards];
   currentCardIdx = 0;
@@ -306,7 +344,7 @@ function renderCard() {
 
   const dotsEl = document.getElementById("page-dots");
   dotsEl.innerHTML = card.pages.map((_, i) =>
-    `<div class="page-dot ${i === currentPageIdx ? 'active' : ''}"></div>`
+    `<div class="page-dot ${i === currentPageIdx ? "active" : ""}"></div>`
   ).join("");
 
   document.getElementById("prevBtn").disabled = currentCardIdx === 0 && currentPageIdx === 0;
@@ -356,12 +394,8 @@ function renderCard() {
 
 function nextPage() {
   const card = currentCards[currentCardIdx];
-  if (currentPageIdx < card.pages.length - 1) {
-    currentPageIdx++;
-    renderCard();
-  } else {
-    nextSection();
-  }
+  if (currentPageIdx < card.pages.length - 1) { currentPageIdx++; renderCard(); }
+  else nextSection();
 }
 function nextSection() {
   const card = currentCards[currentCardIdx];
@@ -378,6 +412,9 @@ function shuffleCards() {
   renderCard();
 }
 
+/* ============================================================
+   DEKA
+   ============================================================ */
 function openDekaList() {
   const cat = DATA[currentCat];
   document.getElementById("deka-list-title").textContent = `ฎีกาสำคัญ — ${cat.label}`;
@@ -392,7 +429,6 @@ function openDekaList() {
 
 function viewDeka(i) {
   const d = DATA[currentCat].dekaList[i];
-
   const quizHtml = d.quiz ? `
     <div class="deka-section-label">🧠 คำถามทดสอบความเข้าใจ</div>
     <p class="quiz-question">${d.quiz.question}</p>
@@ -411,18 +447,13 @@ function viewDeka(i) {
     <div class="deka-card">
       <h2 style="margin-top:0;font-size:1.1rem;">${d.title}</h2>
       <div>${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
-
       <div class="deka-section-label">📜 ตัวบทย่อ</div>
       <div class="deka-principle-box">${d.statute}</div>
-
       <div class="deka-section-label">📁 ข้อเท็จจริง</div>
       <p style="font-size:0.9rem;line-height:1.8;margin:6px 0 0;">${d.facts}</p>
-
       <div class="deka-section-label">⚖️ หลักที่ศาลวินิจฉัย</div>
       <p style="font-size:0.9rem;line-height:1.8;margin:6px 0 0;">${d.holding}</p>
-
       <div class="deka-ref">📌 หลักการสำคัญ: ${d.principle}</div>
-
       ${quizHtml}
     </div>`;
   navTo("screen-deka-view");
@@ -435,18 +466,17 @@ function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
     if (oi === correctIdx) el.classList.add("correct");
     else if (oi === chosenIdx) el.classList.add("wrong");
   });
-
   const d = DATA[currentCat].dekaList[dekaIdx];
   const isCorrect = chosenIdx === correctIdx;
   const resultEl  = document.getElementById(`quiz-result-${dekaIdx}`);
-  const titleEl   = document.getElementById(`quiz-result-title-${dekaIdx}`);
-  const explainEl = document.getElementById(`quiz-result-explain-${dekaIdx}`);
-
-  titleEl.textContent   = isCorrect ? "✅ ถูกต้อง!" : "❌ ไม่ถูกต้อง";
-  explainEl.textContent = d.quiz.explanation;
+  document.getElementById(`quiz-result-title-${dekaIdx}`).textContent   = isCorrect ? "✅ ถูกต้อง!" : "❌ ไม่ถูกต้อง";
+  document.getElementById(`quiz-result-explain-${dekaIdx}`).textContent = d.quiz.explanation;
   resultEl.classList.add("show", isCorrect ? "ok" : "no");
 }
 
+/* ============================================================
+   WRITING / IRAC
+   ============================================================ */
 function openWritingList() {
   const cat = DATA[currentCat];
   document.getElementById("writing-list-title").textContent = `โจทย์ฝึกวินิจฉัย — ${cat.label}`;
@@ -519,12 +549,13 @@ async function submitAnswer(i) {
   }
 }
 
+/* ============================================================
+   AI FACT EXTRACTION
+   ============================================================ */
 async function gptExtractFacts(answer, problem) {
   const prompt = `คุณคือผู้ช่วยอาจารย์นิติศาสตร์ ทำหน้าที่ดึง "ข้อเท็จจริงสำคัญ"
-
 [โจทย์] ${problem}
 [คำตอบนักศึกษา] ${answer}
-
 OUTPUT JSON เท่านั้น:
 {"problemFacts":[],"answerFacts":[],"matchedFacts":[],"missingFacts":[],"factMatchScore":0.5,"analysis":""}`;
   try {
@@ -541,6 +572,9 @@ OUTPUT JSON เท่านั้น:
   }
 }
 
+/* ============================================================
+   SCORING ENGINE
+   ============================================================ */
 function tokenize(text) {
   const t = text.toLowerCase().replace(/[^\u0E00-\u0E7Fa-z0-9\s]/g," ").trim();
   const words = t.split(/\s+/).filter(w=>w.length>=2);
@@ -715,37 +749,10 @@ function renderScoreResult(R) {
       <div style="margin-top:14px;font-size:0.75rem;color:var(--text-sub);background:var(--bg);padding:8px;border-radius:6px;">
         💡 <b>เกณฑ์:</b> ${QCE_CONFIG.criteriaHint}
       </div>
-}
     </div>`;
 }
 
 window.addEventListener("DOMContentLoaded", loadData);
-// 1. ประกาศตัวแปรเก็บสถานะขนาดฟอนต์ไว้ในระดับ Global
-// ประกาศตัวแปรเก็บขนาดฟอนต์ไว้ในระบบ
-let currentFontSize = 1.15; 
-
-// สร้างกฎเหล็ก CSS ฝังเข้าไปในระบบตั้งแต่เปิดแอป เพื่อคุมไม่ให้หน้าถัดไปล้างสไตล์ฟอนต์ของเรา
-const styleStyle = document.createElement('style');
-styleStyle.innerHTML = `
-    #card-content, #card-content *, #deka-content, #deka-content * {
-        font-size: var(--card-font-size, 1.15rem) !important;
-    }
-`;
-document.head.appendChild(styleStyle);
-
-// ฟังก์ชันสำหรับกดปุ่มลด-ขยาย (ที่ปุ่มของคุณเรียกใช้)
-function changeFontSize(delta) {
-    currentFontSize += delta;
-    // ล็อกขอบเขตไม่ให้เล็กหรือใหญ่เกินไป
-    if (currentFontSize < 0.9) currentFontSize = 0.9;
-    if (currentFontSize > 1.6) currentFontSize = 1.6;
-    
-    // ยิงค่าไปเปลี่ยนที่กล่องใหญ่สุด (#app) ซึ่งไม่เคยถูกลบเวลาเปลี่ยนหน้า
-    const appContainer = document.getElementById('app');
-    if (appContainer) {
-        appContainer.style.setProperty('--card-font-size', currentFontSize + 'rem');
-    }
-}
 </script>
 </body>
 </html>
