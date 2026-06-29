@@ -10,7 +10,7 @@
         if (password !== "67") {
             alert("รหัสผ่านไม่ถูกต้อง!");
             window.location.href = "https://www.google.com";
-        }
+       }
     </script>
     <style>
         :root {
@@ -19,6 +19,9 @@
             --text-main: #2c3e50; --text-sub: #7f8c8d;
             --shadow: 0 10px 30px rgba(0,0,0,0.08); --radius: 20px; --disabled: #e2e8f0;
         }
+        /* ลบ rule เดิมที่ครอบ button,card,h2... ออกทั้งหมด แล้วใช้ class แทน */
+        .pre-line { white-space: pre-line !important; }
+
         [data-theme="dark"] {
             --bg: #0f172a; --card-bg: #1e293b; --text-main: #f1f5f9;
             --text-sub: #94a3b8; --primary: #38bdf8;
@@ -69,6 +72,8 @@
             background:var(--bg); border-radius:12px; padding:16px 18px;
             font-size:0.95rem; line-height:2; color:var(--text-main);
             border-left:4px solid var(--primary);
+            /* รองรับ \n จาก JSON */
+            white-space: pre-line;
         }
         .fc-elements { display:flex; flex-direction:column; gap:10px; }
         .fc-elem-row {
@@ -93,8 +98,10 @@
             background:var(--bg); border-radius:12px; padding:14px 16px;
             border-left:4px solid var(--accent); margin:14px 0;
             font-size:0.9rem; line-height:1.8; font-style:italic; color:var(--text-main);
+            white-space: pre-line;
         }
         .deka-section-label { font-size:0.75rem; font-weight:700; color:var(--text-sub); text-transform:uppercase; letter-spacing:0.05em; margin:14px 0 6px; }
+        .deka-body-text { font-size:0.9rem; line-height:1.8; margin:6px 0 0; white-space: pre-line; }
         .quiz-question { font-weight:700; font-size:1rem; margin:10px 0 14px; line-height:1.6; }
         .quiz-option {
             display:block; width:100%; padding:13px 16px; margin:8px 0;
@@ -127,11 +134,14 @@
         .score-table td { padding:8px 12px; border-top:1px solid var(--disabled); vertical-align:top; }
         .score-table .pts { text-align:right; font-weight:bold; white-space:nowrap; }
         .pts-full{color:var(--secondary)} .pts-mid{color:var(--accent)} .pts-fail{color:var(--danger)}
-        .deka-ref { font-size:0.78rem; color:var(--text-sub); background:var(--bg); border-left:3px solid var(--primary); padding:8px 12px; border-radius:0 8px 8px 0; margin-top:10px; }
+        .deka-ref { font-size:0.78rem; color:var(--text-sub); background:var(--bg); border-left:3px solid var(--primary); padding:8px 12px; border-radius:0 8px 8px 0; margin-top:10px; white-space: pre-line; }
         .criteria-box { background:var(--bg); border-radius:12px; padding:14px 18px; margin-bottom:16px; font-size:0.82rem; line-height:1.7; border-left:4px solid var(--primary); }
         .criteria-box strong { color:var(--primary); }
         .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:#fff; animation:spin 1s linear infinite; margin-right:8px; vertical-align:middle; }
         @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* model answer pre-line */
+        .model-answer-text { margin:4px 0 12px; white-space: pre-line; line-height:1.9; }
 
         #loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:999; }
         .load-spinner { width:48px; height:48px; border:5px solid var(--disabled); border-top-color:var(--primary); border-radius:50%; animation:spin 0.9s linear infinite; }
@@ -216,6 +226,18 @@
 </div>
 
 <script>
+/* ============================================================
+   UTILITY — แปลง \n เป็น <br> สำหรับ innerHTML
+   ใช้ฟังก์ชันนี้ทุกที่ที่เอาข้อความจาก JSON ไปใส่ innerHTML
+   ============================================================ */
+function nl(text) {
+  if (!text) return "";
+  // แปลง literal \n\n หรือ \n → <br>
+  return String(text)
+    .replace(/\\n/g, "\n")   // กรณี JSON เก็บเป็น \\n (escaped)
+    .replace(/\n/g, "<br>"); // แปลง newline จริง → <br>
+}
+
 /* ============================================================
    QCE_CONFIG
    ============================================================ */
@@ -348,7 +370,7 @@ function renderCard() {
   ).join("");
 
   document.getElementById("prevBtn").disabled = currentCardIdx === 0 && currentPageIdx === 0;
-  document.getElementById("nextBtn").textContent =
+  document.getElementById("nextBtn").innerText =
     currentCardIdx === total - 1 && currentPageIdx === card.pages.length - 1 ? "จบ" : "ถัดไป";
 
   const page = card.pages[currentPageIdx];
@@ -364,7 +386,7 @@ function renderCard() {
         </div>
       </div>
       <div class="fc-body">
-        <div class="fc-body-text">${page.content}</div>
+        <div class="fc-body-text">${nl(page.content)}</div>
       </div>
       <p class="fc-hint">👆 แตะเพื่อดูองค์ประกอบ</p>`;
   } else if (page.type === "elements") {
@@ -382,8 +404,8 @@ function renderCard() {
             <div class="fc-elem-row">
               <div class="fc-elem-num">${i + 1}</div>
               <div class="fc-elem-text">
-                <span class="fc-elem-label">${el.label}</span><br>
-                <span style="color:var(--text-sub);font-size:0.85rem;">${el.detail}</span>
+                <span class="fc-elem-label">${nl(el.label)}</span><br>
+                <span style="color:var(--text-sub);font-size:0.85rem;">${nl(el.detail)}</span>
               </div>
             </div>`).join("")}
         </div>
@@ -417,12 +439,12 @@ function shuffleCards() {
    ============================================================ */
 function openDekaList() {
   const cat = DATA[currentCat];
-  document.getElementById("deka-list-title").textContent = `ฎีกาสำคัญ — ${cat.label}`;
+  document.getElementById("deka-list-title").innerText = `ฎีกาสำคัญ — ${cat.label}`;
   document.getElementById("deka-items").innerHTML = cat.dekaList.map((d, i) => `
     <div class="content-block" style="cursor:pointer;" onclick="viewDeka(${i})">
       <div style="font-weight:bold;">${d.title}</div>
       <div style="margin-top:6px;">${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
-      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${d.principle}</div>
+      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl(d.principle)}</div>
     </div>`).join("");
   navTo("screen-deka-list");
 }
@@ -431,11 +453,11 @@ function viewDeka(i) {
   const d = DATA[currentCat].dekaList[i];
   const quizHtml = d.quiz ? `
     <div class="deka-section-label">🧠 คำถามทดสอบความเข้าใจ</div>
-    <p class="quiz-question">${d.quiz.question}</p>
+    <p class="quiz-question">${nl(d.quiz.question)}</p>
     <div id="quiz-opts-${i}">
       ${d.quiz.options.map((opt, oi) => `
         <button class="quiz-option" onclick="answerQuiz(${i}, ${oi}, ${d.quiz.correct}, this)">
-          ${String.fromCharCode(65 + oi)}. ${opt}
+          ${String.fromCharCode(65 + oi)}. ${nl(opt)}
         </button>`).join("")}
     </div>
     <div id="quiz-result-${i}" class="quiz-result">
@@ -448,12 +470,12 @@ function viewDeka(i) {
       <h2 style="margin-top:0;font-size:1.1rem;">${d.title}</h2>
       <div>${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
       <div class="deka-section-label">📜 ตัวบทย่อ</div>
-      <div class="deka-principle-box">${d.statute}</div>
+      <div class="deka-principle-box">${nl(d.statute)}</div>
       <div class="deka-section-label">📁 ข้อเท็จจริง</div>
-      <p style="font-size:0.9rem;line-height:1.8;margin:6px 0 0;">${d.facts}</p>
+      <p class="deka-body-text">${nl(d.facts)}</p>
       <div class="deka-section-label">⚖️ หลักที่ศาลวินิจฉัย</div>
-      <p style="font-size:0.9rem;line-height:1.8;margin:6px 0 0;">${d.holding}</p>
-      <div class="deka-ref">📌 หลักการสำคัญ: ${d.principle}</div>
+      <p class="deka-body-text">${nl(d.holding)}</p>
+      <div class="deka-ref">📌 หลักการสำคัญ: ${nl(d.principle)}</div>
       ${quizHtml}
     </div>`;
   navTo("screen-deka-view");
@@ -469,8 +491,8 @@ function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
   const d = DATA[currentCat].dekaList[dekaIdx];
   const isCorrect = chosenIdx === correctIdx;
   const resultEl  = document.getElementById(`quiz-result-${dekaIdx}`);
-  document.getElementById(`quiz-result-title-${dekaIdx}`).textContent   = isCorrect ? "✅ ถูกต้อง!" : "❌ ไม่ถูกต้อง";
-  document.getElementById(`quiz-result-explain-${dekaIdx}`).textContent = d.quiz.explanation;
+  document.getElementById(`quiz-result-title-${dekaIdx}`).innerText   = isCorrect ? "✅ ถูกต้อง!" : "❌ ไม่ถูกต้อง";
+  document.getElementById(`quiz-result-explain-${dekaIdx}`).innerHTML = nl(d.quiz.explanation);
   resultEl.classList.add("show", isCorrect ? "ok" : "no");
 }
 
@@ -479,13 +501,13 @@ function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
    ============================================================ */
 function openWritingList() {
   const cat = DATA[currentCat];
-  document.getElementById("writing-list-title").textContent = `โจทย์ฝึกวินิจฉัย — ${cat.label}`;
+  document.getElementById("writing-list-title").innerText = `โจทย์ฝึกวินิจฉัย — ${cat.label}`;
   document.getElementById("writing-items").innerHTML = cat.writingProblems.map((w, i) => `
     <div class="content-block" style="cursor:pointer;" onclick="openWriting(${i})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <b>${w.title}</b><span class="tag tag-green">${w.difficulty}</span>
       </div>
-      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${w.problem.substring(0, 90)}…</div>
+      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl(w.problem.substring(0, 90))}…</div>
     </div>`).join("");
   navTo("screen-writing-list");
 }
@@ -497,7 +519,7 @@ function openWriting(i) {
     <div class="content-block">
       <span class="tag tag-green">${w.difficulty}</span>
       <h3 style="margin-top:8px;">${w.title}</h3>
-      <p style="line-height:1.9;background:var(--bg);padding:14px;border-radius:12px;">${w.problem}</p>
+      <p style="line-height:1.9;background:var(--bg);padding:14px;border-radius:12px;white-space:pre-line;">${nl(w.problem)}</p>
       <div class="criteria-box">
         <strong>เกณฑ์การให้คะแนน (IRAC)</strong><br>
         🔵 Issue = ${cfg.issue.maxPoints} คะแนน &nbsp;|&nbsp;
@@ -534,10 +556,14 @@ async function submitAnswer(i) {
     document.getElementById("model-answer-section").innerHTML = `
       <div class="content-block" style="margin-top:16px;border-top:3px solid var(--primary);">
         <h3 style="margin-top:0;">📖 เฉลยแนวคำตอบ</h3>
-        <span class="tag tag-blue">Issue</span><p style="margin:4px 0 12px;">${ma.issue}</p>
-        <span class="tag tag-blue">Rule</span><p style="margin:4px 0 12px;">${ma.rule}</p>
-        <span class="tag tag-blue">Application</span><p style="margin:4px 0 12px;line-height:1.9;">${ma.application}</p>
-        <span class="tag tag-blue">Conclusion</span><p style="margin:4px 0;">${ma.conclusion}</p>
+        <span class="tag tag-blue">Issue</span>
+        <p class="model-answer-text">${nl(ma.issue)}</p>
+        <span class="tag tag-blue">Rule</span>
+        <p class="model-answer-text">${nl(ma.rule)}</p>
+        <span class="tag tag-blue">Application</span>
+        <p class="model-answer-text">${nl(ma.application)}</p>
+        <span class="tag tag-blue">Conclusion</span>
+        <p class="model-answer-text">${nl(ma.conclusion)}</p>
       </div>`;
   } catch (err) {
     console.error(err);
