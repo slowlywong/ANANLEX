@@ -5,13 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socratic Law Lab | Pro Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
-    <script>
-        const password = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานระบบติวข้อสอบ:");
-        if (password !== "67") {
-            alert("รหัสผ่านไม่ถูกต้อง!");
-            window.location.href = "https://www.google.com";
-       }
-    </script>
     <style>
         :root {
             --bg: #f4f7f9; --card-bg: #ffffff; --primary: #1a2a6c;
@@ -252,7 +245,7 @@ const QCE_CONFIG = {
     application: { full:"การปรับบทสมบูรณ์: มีการดึงข้อเท็จจริงมาปรับเข้ากับองค์ประกอบและสรุปผลข้อเท็จจริง (Fact → Element → Result) ได้อย่างมีตรรกะ", partial:"วิเคราะห์แบบคำตอบไม่ครบ: มีการโยงตรรกะอยู่บ้างแต่ดึงข้อเท็จจริงจากโจทย์มาปรับใช้ไม่ครบถ้วน", min:"ตรรกะผิดพลาด/เบาบาง: คะแนน Reasoning ต่ำเนื่องจากการเชื่อมโยงกฎหมายกับข้อเท็จจริงไม่ชัดเจน", none:"ไม่พบการปรับใช้กฎหมาย หรือเขียนหลุดจากประเด็นข้อเท็จจริงของโจทย์", hedge:"⚠️ ตรวจพบคำลังเลในคำตอบ (น่าจะ/อาจจะ) — ตามเกณฑ์ อ.วัชรพล ศิริ: ท่อน Application ตัดเหลือ 0 คะแนนทันที" },
     conclusion: { full:"สรุปผลฟันธงท้ายประโยคถูกต้องและตรงประเด็นตามเฉลยมาตรฐาน", half:"มีการสรุปผลฟันธง แต่การใช้คำสรุปยังไม่ชัดเจนหรือขาดรายละเอียดสำคัญ", none:"ไม่พบการสรุปผลฟันธง หรือผลสรุปขัดแย้งกับคำวินิจฉัย (ได้ 0 คะแนน)" }
   },
-  criteriaHint: "ระบบตรวจด้วยเกณฑ์อาจารย์นิติศาสตร์ (อ.แก้ว มช. + อ.วัชรพล): ตรวจสอบลึกลงไปที่โครงสร้างตรรกะ (Logic & Reasoning) เลขมาตราต้องตรง มีตัวบทอธิบายประกอบ และห้ามมีคำลังเลในย่อหน้าปรับบทเด็ดขาด",
+  criteriaHint: "ระบบตรวจด้วยเกณฑ์อาจารย์นิติศาสตร์ : ตรวจสอบลึกลงไปที่โครงสร้างตรรกะ (Logic & Reasoning) เลขมาตราต้องตรง มีตัวบทอธิบายประกอบ และห้ามมีคำลังเลในย่อหน้าปรับบทเด็ดขาด",
   grades: [ { min:80, label:"ดีเยี่ยม ✨", color:"#27ae60" }, { min:60, label:"ผ่านเกณฑ์ ✅", color:"#2980b9" }, { min:40, label:"ต้องปรับปรุง ⚠️", color:"#f39c12" }, { min:0, label:"ต้องฝึกเพิ่ม ❌", color:"#e74c3c" } ]
 };
 
@@ -388,7 +381,7 @@ function renderCard() {
       <div class="fc-body">
         <div class="fc-body-text">${nl(page.content)}</div>
       </div>
-      <p class="fc-hint">👆 แตะเพื่อดูองค์ประกอบ</p>`;
+      <p class="fc-hint"> แตะเพื่อดูองค์ประกอบ</p>`;
   } else if (page.type === "elements") {
     contentEl.innerHTML = `
       <div class="fc-header">
@@ -410,7 +403,7 @@ function renderCard() {
             </div>`).join("")}
         </div>
       </div>
-      <p class="fc-hint">👆 แตะเพื่อไปการ์ดถัดไป</p>`;
+      <p class="fc-hint"> แตะเพื่อไปการ์ดถัดไป</p>`;
   }
 }
 
