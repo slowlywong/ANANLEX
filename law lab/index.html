@@ -141,13 +141,36 @@
         .load-error { color:var(--danger); font-weight:bold; text-align:center; max-width:360px; line-height:1.8; }
         .load-error code { display:block; background:var(--disabled); border-radius:8px; padding:8px 12px; font-size:0.8rem; margin-top:8px; color:var(--text-main); }
         .retry-btn { padding:10px 28px; background:var(--primary); color:#fff; border:none; border-radius:12px; cursor:pointer; font-family:inherit; font-size:0.95rem; font-weight:bold; }
+
+        /* ===== SEARCH ===== */
+        .search-box { width:100%; padding:13px 16px; border-radius:12px; border:2px solid var(--disabled); font-family:inherit; font-size:0.92rem; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); }
+        .search-box:focus { outline:none; border-color:var(--primary); }
+        .search-result-item { padding:14px 16px; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .search-result-item:hover { transform:translateY(-2px); }
+        .search-empty { color:var(--text-sub); font-size:0.85rem; padding:6px 2px; }
+        .tag.clickable { cursor:pointer; transition:0.2s; }
+        .tag.clickable:hover { filter:brightness(0.92); text-decoration:underline; }
+        .fc-elem-label.clickable, .fc-section-badge.clickable { cursor:pointer; }
+        .fc-elem-label.clickable:hover, .fc-section-badge.clickable:hover { text-decoration:underline; }
+        .deka-nav-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; }
+
+        /* ===== FLOATING SHORTCUT BUTTON ===== */
+        .fab {
+            position:fixed; bottom:24px; right:24px; z-index:200;
+            background:var(--primary); color:#fff; border:none;
+            padding:14px 24px; border-radius:30px; font-weight:800;
+            font-size:0.95rem; font-family:inherit; box-shadow:var(--shadow);
+            cursor:pointer; transition:transform 0.2s;
+        }
+        .fab:hover { transform:translateY(-3px); }
+        .fab:active { transform:translateY(0); }
     </style>
 </head>
 <body data-theme="light">
 
 <div id="loading-overlay">
     <div class="load-spinner"></div>
-    <p id="load-msg" style="color:var(--text-sub);margin:0;">กำลังโหลด data.json …</p>
+    <p id="load-msg" style="color:var(--text-sub);margin:0;font-style:italic;">Scio me nihil scire</p>
 </div>
 
 <div class="container" id="app" style="display:none;">
@@ -172,6 +195,11 @@
     <!-- SCREEN: Flash Card -->
     <section id="screen-flash" class="screen">
         <button class="back-nav" onclick="navTo('screen-home')">← กลับเมนูหลัก</button>
+        <div class="content-block" style="margin-bottom:16px;">
+            <label style="font-weight:bold;display:block;margin-bottom:8px;"> ค้นหามาตรา / คำสำคัญ</label>
+            <input type="text" id="flash-search-input" class="search-box" placeholder="เช่น มาตรา 420 หรือ เจตนา" oninput="performSearchFlash(this.value)" onkeydown="searchFlashOnEnter(event)">
+            <div id="flash-search-results" style="margin-top:10px;"></div>
+        </div>
         <div class="progress-container"><div id="pb" class="progress-bar"></div></div>
         <div class="card-wrapper">
             <div class="flashcard" id="flashcard-main" onclick="nextPage()">
@@ -188,12 +216,18 @@
             <button class="btn btn-secondary" onclick="changeFontSize(-0.1)" style="padding:8px 16px;">A−</button>
             <button class="btn btn-secondary" onclick="changeFontSize(0.1)"  style="padding:8px 16px;">A+</button>
         </div>
+        <button class="fab" onclick="goToRelatedDeka()">Deka</button>
     </section>
 
     <!-- SCREEN: รายการ Deka -->
     <section id="screen-deka-list" class="screen">
         <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
         <h2 id="deka-list-title" style="font-size:1.2rem;"></h2>
+        <div class="content-block" style="margin-bottom:16px;">
+            <label style="font-weight:bold;display:block;margin-bottom:8px;"> ค้นหาฎีกา / คำสำคัญ</label>
+            <input type="text" id="deka-search-input" class="search-box" placeholder="เช่น ละเมิด หรือ นิติกรรม" oninput="performSearchDeka(this.value)" onkeydown="searchDekaOnEnter(event)">
+            <div id="deka-search-results" style="margin-top:10px;"></div>
+        </div>
         <div id="deka-items"></div>
     </section>
 
@@ -201,6 +235,7 @@
     <section id="screen-deka-view" class="screen">
         <button class="back-nav" onclick="navTo('screen-deka-list')">← กลับรายการ</button>
         <div id="deka-content"></div>
+        <button class="fab" onclick="goToRelatedCode()">Code</button>
     </section>
 
     <!-- SCREEN: รายการ Writing -->
@@ -258,6 +293,7 @@ let currentCards   = [];
 let currentCardIdx = 0;
 let currentPageIdx = 0;
 let currentFontSize = 1.0;
+let currentDekaIdx  = 0;
 
 /* ============================================================
    BOOT
@@ -341,6 +377,204 @@ function selectCategory(key) {
 }
 
 /* ============================================================
+   SEARCH — ค้นหามาตรา / ฎีกา / label ที่แปะไว้ในการ์ด
+   วางกล่องค้นหาไว้ด้านบนของแต่ละส่วน (Flash Card และ Deka) แยกกัน
+   ============================================================ */
+function escJS(str) {
+  return String(str == null ? "" : str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+}
+
+let lastFlashResults = [];
+let lastDekaResults  = [];
+
+function performSearchFlash(query) {
+  const resultsEl = document.getElementById("flash-search-results");
+  if (!resultsEl) return;
+  const q = (query || "").trim().toLowerCase();
+  lastFlashResults = [];
+  if (q.length < 1 || !currentCat) { resultsEl.innerHTML = ""; return; }
+
+  const cat = DATA[currentCat];
+  const results = [];
+  (cat.flashCards || []).forEach((card, idx) => {
+    const secMatch   = card.section && String(card.section).toLowerCase().includes(q);
+    const titleMatch = card.title && String(card.title).toLowerCase().includes(q);
+    let elemMatch = false;
+    (card.pages || []).forEach(p => {
+      if (p.type === "elements" && p.elements) {
+        p.elements.forEach(el => {
+          if ((el.label && String(el.label).toLowerCase().includes(q)) || (el.detail && String(el.detail).toLowerCase().includes(q))) elemMatch = true;
+        });
+      }
+      if (p.type === "law" && p.content && String(p.content).toLowerCase().includes(q)) elemMatch = true;
+    });
+    // fallback: match any field in the card in case the data schema differs
+    let rawMatch = false;
+    try { rawMatch = JSON.stringify(card).toLowerCase().includes(q); } catch (e) { rawMatch = false; }
+
+    if (secMatch || titleMatch || elemMatch || rawMatch) {
+      results.push({ idx, label: `มาตรา ${card.section || "?"} — ${card.title || "ไม่มีชื่อ"}` });
+    }
+  });
+
+  lastFlashResults = results;
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = `<div class="search-empty">ไม่พบผลลัพธ์ที่ตรงกับ "${query}"</div>`;
+    return;
+  }
+  resultsEl.innerHTML = results.map(r => `
+    <div class="content-block search-result-item" onclick="jumpToFlashCard(${r.idx})">
+      <div>
+        <span class="tag tag-blue">Flash Card</span>
+        <div style="margin-top:6px;font-weight:bold;">${r.label}</div>
+      </div>
+      <span style="color:var(--text-sub);">→</span>
+    </div>`).join("");
+}
+
+function performSearchDeka(query) {
+  const resultsEl = document.getElementById("deka-search-results");
+  if (!resultsEl) return;
+  const q = (query || "").trim().toLowerCase();
+  lastDekaResults = [];
+  if (q.length < 1 || !currentCat) { resultsEl.innerHTML = ""; return; }
+
+  const cat = DATA[currentCat];
+  const results = [];
+  (cat.dekaList || []).forEach((d, idx) => {
+    const titleMatch     = d.title && String(d.title).toLowerCase().includes(q);
+    const tagMatch       = d.tags && d.tags.some(t => String(t).toLowerCase().includes(q));
+    const principleMatch = d.principle && String(d.principle).toLowerCase().includes(q);
+    const statuteMatch   = d.statute && String(d.statute).toLowerCase().includes(q);
+    let rawMatch = false;
+    try { rawMatch = JSON.stringify(d).toLowerCase().includes(q); } catch (e) { rawMatch = false; }
+
+    if (titleMatch || tagMatch || principleMatch || statuteMatch || rawMatch) {
+      results.push({ idx, label: d.title || "ไม่มีชื่อ" });
+    }
+  });
+
+  lastDekaResults = results;
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = `<div class="search-empty">ไม่พบผลลัพธ์ที่ตรงกับ "${query}"</div>`;
+    return;
+  }
+  resultsEl.innerHTML = results.map(r => `
+    <div class="content-block search-result-item" onclick="jumpToDeka(${r.idx})">
+      <div>
+        <span class="tag tag-orange">ฎีกา</span>
+        <div style="margin-top:6px;font-weight:bold;">${r.label}</div>
+      </div>
+      <span style="color:var(--text-sub);">→</span>
+    </div>`).join("");
+}
+
+function searchFlashOnEnter(event) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  performSearchFlash(event.target.value);
+  if (lastFlashResults.length > 0) jumpToFlashCard(lastFlashResults[0].idx);
+}
+
+function searchDekaOnEnter(event) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  performSearchDeka(event.target.value);
+  if (lastDekaResults.length > 0) jumpToDeka(lastDekaResults[0].idx);
+}
+
+function quickSearchFlash(term) {
+  navTo("screen-flash");
+  const input = document.getElementById("flash-search-input");
+  if (input) {
+    input.value = term;
+    performSearchFlash(term);
+    setTimeout(() => input.scrollIntoView({ behavior:"smooth", block:"center" }), 50);
+  }
+}
+
+function quickSearchDeka(term) {
+  navTo("screen-deka-list");
+  const input = document.getElementById("deka-search-input");
+  if (input) {
+    input.value = term;
+    performSearchDeka(term);
+    setTimeout(() => input.scrollIntoView({ behavior:"smooth", block:"center" }), 50);
+  }
+}
+
+function jumpToFlashCard(idx) {
+  currentCards   = [...DATA[currentCat].flashCards];
+  currentCardIdx = idx;
+  currentPageIdx = 0;
+  renderCard();
+  navTo("screen-flash");
+  const input   = document.getElementById("flash-search-input");
+  const results = document.getElementById("flash-search-results");
+  if (input) input.value = "";
+  if (results) results.innerHTML = "";
+}
+
+function jumpToDeka(idx) {
+  viewDeka(idx);
+  const input   = document.getElementById("deka-search-input");
+  const results = document.getElementById("deka-search-results");
+  if (input) input.value = "";
+  if (results) results.innerHTML = "";
+}
+
+/* ============================================================
+   ปุ่มลัด — ไปมาตรา (Code) ที่เกี่ยวข้องกับฎีกา และไปฎีกา (Deka) ที่เกี่ยวข้องกับมาตรา
+   ============================================================ */
+function extractSectionsFromText(text) {
+  const nums = new Set();
+  if (!text) return nums;
+  const str = String(text);
+  [/มาตรา\s*(\d+)/g, /ม\.\s*(\d+)/g].forEach(re => {
+    const r = new RegExp(re.source, "g");
+    let m;
+    while ((m = r.exec(str)) !== null) nums.add(m[1]);
+  });
+  return nums;
+}
+
+// จากหน้า Flash Card → หาฎีกาที่เกี่ยวข้องกับมาตราของการ์ดปัจจุบัน
+function goToRelatedDeka() {
+  if (!currentCat || !currentCards.length) return;
+  const card = currentCards[currentCardIdx];
+  const section = String(card.section || "").trim();
+  if (!section) return;
+  quickSearchDeka(section);
+}
+
+// จากหน้าฎีกา → หามาตรา (Flash Card) ที่เกี่ยวข้องกับฎีกาปัจจุบัน
+function goToRelatedCode() {
+  if (!currentCat) return;
+  const d = DATA[currentCat].dekaList[currentDekaIdx];
+  if (!d) return;
+
+  const sections = new Set();
+  (d.tags || []).forEach(t => {
+    extractSectionsFromText(t).forEach(n => sections.add(n));
+    if (/^\d+$/.test(String(t).trim())) sections.add(String(t).trim());
+  });
+  extractSectionsFromText(d.statute).forEach(n => sections.add(n));
+  extractSectionsFromText(d.principle).forEach(n => sections.add(n));
+  extractSectionsFromText(d.facts).forEach(n => sections.add(n));
+  extractSectionsFromText(d.holding).forEach(n => sections.add(n));
+
+  if (sections.size > 0) {
+    quickSearchFlash([...sections][0]);
+  } else {
+    // ไม่พบเลขมาตราชัดเจน ใช้ tag แรกหรือชื่อเรื่องแทน
+    const term = (d.tags && d.tags[0]) || d.title || "";
+    quickSearchFlash(term);
+  }
+}
+
+/* ============================================================
    FLASH CARDS
    ============================================================ */
 function startFlash() {
@@ -349,6 +583,10 @@ function startFlash() {
   currentPageIdx = 0;
   renderCard();
   navTo("screen-flash");
+  const input   = document.getElementById("flash-search-input");
+  const results = document.getElementById("flash-search-results");
+  if (input) input.value = "";
+  if (results) results.innerHTML = "";
 }
 
 function renderCard() {
@@ -372,7 +610,7 @@ function renderCard() {
   if (page.type === "law") {
     contentEl.innerHTML = `
       <div class="fc-header">
-        <div class="fc-section-badge">ม.${card.section}</div>
+        <div class="fc-section-badge clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(card.section)}')" title="ค้นหามาตรานี้">ม.${card.section}</div>
         <div class="fc-title-area">
           <p class="fc-law-name">${card.title}</p>
           <p class="fc-subtitle">${card.category || ""} | การ์ด ${currentCardIdx + 1}/${total}</p>
@@ -385,7 +623,7 @@ function renderCard() {
   } else if (page.type === "elements") {
     contentEl.innerHTML = `
       <div class="fc-header">
-        <div class="fc-section-badge">ม.${card.section}</div>
+        <div class="fc-section-badge clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(card.section)}')" title="ค้นหามาตรานี้">ม.${card.section}</div>
         <div class="fc-title-area">
           <p class="fc-law-name">องค์ประกอบของ ${card.title}</p>
           <p class="fc-subtitle">การ์ด ${currentCardIdx + 1}/${total}</p>
@@ -397,7 +635,7 @@ function renderCard() {
             <div class="fc-elem-row">
               <div class="fc-elem-num">${i + 1}</div>
               <div class="fc-elem-text">
-                <span class="fc-elem-label">${nl(el.label)}</span><br>
+                <span class="fc-elem-label clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(el.label)}')" title="ค้นหาคำนี้">${nl(el.label)}</span><br>
                 <span style="color:var(--text-sub);font-size:0.85rem;">${nl(el.detail)}</span>
               </div>
             </div>`).join("")}
@@ -433,17 +671,23 @@ function shuffleCards() {
 function openDekaList() {
   const cat = DATA[currentCat];
   document.getElementById("deka-list-title").innerText = `ฎีกาสำคัญ — ${cat.label}`;
+  const input   = document.getElementById("deka-search-input");
+  const results = document.getElementById("deka-search-results");
+  if (input) input.value = "";
+  if (results) results.innerHTML = "";
   document.getElementById("deka-items").innerHTML = cat.dekaList.map((d, i) => `
     <div class="content-block" style="cursor:pointer;" onclick="viewDeka(${i})">
       <div style="font-weight:bold;">${d.title}</div>
-      <div style="margin-top:6px;">${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
+      <div style="margin-top:6px;">${d.tags.map(t => `<span class="tag tag-blue clickable" onclick="event.stopPropagation(); quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${t}</span>`).join(" ")}</div>
       <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl(d.principle)}</div>
     </div>`).join("");
   navTo("screen-deka-list");
 }
 
 function viewDeka(i) {
-  const d = DATA[currentCat].dekaList[i];
+  currentDekaIdx = i;
+  const dekaListArr = DATA[currentCat].dekaList;
+  const d = dekaListArr[i];
   const quizHtml = d.quiz ? `
     <div class="deka-section-label">🧠 คำถามทดสอบความเข้าใจ</div>
     <p class="quiz-question">${nl(d.quiz.question)}</p>
@@ -461,7 +705,7 @@ function viewDeka(i) {
   document.getElementById("deka-content").innerHTML = `
     <div class="deka-card">
       <h2 style="margin-top:0;font-size:1.1rem;">${d.title}</h2>
-      <div>${d.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join(" ")}</div>
+      <div>${d.tags.map(t => `<span class="tag tag-blue clickable" onclick="quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${t}</span>`).join(" ")}</div>
       <div class="deka-section-label">📜 ตัวบทย่อ</div>
       <div class="deka-principle-box">${nl(d.statute)}</div>
       <div class="deka-section-label">📁 ข้อเท็จจริง</div>
@@ -470,8 +714,21 @@ function viewDeka(i) {
       <p class="deka-body-text">${nl(d.holding)}</p>
       <div class="deka-ref">📌 หลักการสำคัญ: ${nl(d.principle)}</div>
       ${quizHtml}
+      <div style="font-size:0.78rem;color:var(--text-sub);text-align:center;margin-top:18px;">ฎีกาที่ ${i + 1} / ${dekaListArr.length}</div>
+      <div class="deka-nav-row">
+        <button class="btn btn-secondary" onclick="prevDeka()" ${i === 0 ? "disabled" : ""}>← ฎีกาก่อนหน้า</button>
+        <button class="btn btn-primary" onclick="nextDeka()" ${i === dekaListArr.length - 1 ? "disabled" : ""}>ฎีกาถัดไป →</button>
+      </div>
     </div>`;
   navTo("screen-deka-view");
+}
+
+function nextDeka() {
+  const list = DATA[currentCat].dekaList;
+  if (currentDekaIdx < list.length - 1) viewDeka(currentDekaIdx + 1);
+}
+function prevDeka() {
+  if (currentDekaIdx > 0) viewDeka(currentDekaIdx - 1);
 }
 
 function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
