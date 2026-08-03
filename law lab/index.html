@@ -12,7 +12,6 @@
             --text-main: #2c3e50; --text-sub: #7f8c8d;
             --shadow: 0 10px 30px rgba(0,0,0,0.08); --radius: 20px; --disabled: #e2e8f0;
         }
-        /* ลบ rule เดิมที่ครอบ button,card,h2... ออกทั้งหมด แล้วใช้ class แทน */
         .pre-line { white-space: pre-line !important; }
 
         [data-theme="dark"] {
@@ -65,7 +64,6 @@
             background:var(--bg); border-radius:12px; padding:16px 18px;
             font-size:0.95rem; line-height:2; color:var(--text-main);
             border-left:4px solid var(--primary);
-            /* รองรับ \n จาก JSON */
             white-space: pre-line;
         }
         .fc-elements { display:flex; flex-direction:column; gap:10px; }
@@ -133,7 +131,6 @@
         .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:#fff; animation:spin 1s linear infinite; margin-right:8px; vertical-align:middle; }
         @keyframes spin { to{transform:rotate(360deg)} }
 
-        /* model answer pre-line */
         .model-answer-text { margin:4px 0 12px; white-space: pre-line; line-height:1.9; }
 
         #loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:999; }
@@ -145,7 +142,7 @@
         /* ===== SEARCH ===== */
         .search-box { width:100%; padding:13px 16px; border-radius:12px; border:2px solid var(--disabled); font-family:inherit; font-size:0.92rem; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); }
         .search-box:focus { outline:none; border-color:var(--primary); }
-        .search-result-item { padding:14px 16px; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .search-result-item { padding:14px 16px; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; border:none; width:100%; text-align:left; font-family:inherit; background:var(--bg); border-radius:14px; color:var(--text-main); font-size:0.9rem; }
         .search-result-item:hover { transform:translateY(-2px); }
         .search-empty { color:var(--text-sub); font-size:0.85rem; padding:6px 2px; }
         .tag.clickable { cursor:pointer; transition:0.2s; }
@@ -164,6 +161,75 @@
         }
         .fab:hover { transform:translateY(-3px); }
         .fab:active { transform:translateY(0); }
+
+        /* ========================================================
+           NEW: grouped homepage, mindmap modal, tabs, tree overview
+           ======================================================== */
+        .group-block { margin-bottom:20px; }
+        .group-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+        .group-header h3 { margin:0; font-size:1.05rem; }
+        .btn-mindmap {
+            border:none; background:var(--bg); color:var(--primary); font-weight:700;
+            padding:8px 14px; border-radius:12px; cursor:pointer; white-space:nowrap; font-family:inherit; font-size:0.82rem;
+        }
+        .btn-mindmap:hover { filter:brightness(0.95); }
+
+        .modal-overlay {
+            display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45);
+            align-items:center; justify-content:center; z-index:500; padding:20px;
+        }
+        .modal-overlay.active { display:flex; }
+        .modal-box { max-width:480px; width:100%; max-height:80vh; overflow-y:auto; }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; }
+        .modal-close { border:none; background:var(--bg); border-radius:10px; width:32px; height:32px; cursor:pointer; font-size:1rem; flex-shrink:0; }
+
+        .mindmap-tree, .mindmap-tree ul { list-style:none; margin:0; padding-left:18px; border-left:2px solid var(--disabled); }
+        .mindmap-tree.root-list { padding-left:0; border-left:none; }
+        .mindmap-tree li { margin:8px 0; }
+        .tree-label { font-weight:600; }
+        .tree-label.clickable { cursor:pointer; color:var(--primary); }
+        .tree-label.clickable:hover { text-decoration:underline; }
+        .tree-section-tag { color:var(--text-sub); font-style:normal; font-size:0.85em; font-weight:400; }
+
+        .tab-row { display:flex; gap:8px; margin-bottom:12px; }
+        .tab-btn {
+            flex:1; border:2px solid var(--disabled); background:var(--card-bg); color:var(--text-sub);
+            padding:10px 8px; border-radius:12px; font-family:inherit; font-weight:700; font-size:0.82rem; cursor:pointer;
+        }
+        .tab-btn.active { border-color:var(--primary); color:var(--primary); background:var(--bg); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; }
+        .accordion { margin-bottom:8px; }
+        .accordion summary { cursor:pointer; font-weight:700; padding:10px 4px; color:var(--primary); }
+        .accordion-body { display:flex; flex-direction:column; gap:8px; padding-top:6px; }
+        .accordion-nested { margin-left:14px; border-left:2px solid var(--disabled); padding-left:10px; margin-bottom:6px; }
+        .accordion-nested summary { font-size:0.85rem; color:var(--text-main); padding:8px 4px; }
+        .deka-stat-badge { font-size:0.9rem; font-weight:700; }
+
+        /* ===== OVERVIEW TREE (บรรพ > ลักษณะ > หมวด > ส่วน > มาตรา) ===== */
+        .ov-book { margin-bottom:18px; }
+        .ov-book-title { font-size:1rem; font-weight:800; color:var(--primary); margin:0 0 10px; padding-bottom:6px; border-bottom:2px solid var(--disabled); }
+        .ov-title-node { margin-bottom:8px; border:none; }
+        .ov-title-summary {
+            cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;
+            background:var(--bg); border-radius:12px; padding:12px 14px; font-weight:700; font-size:0.92rem;
+        }
+        .ov-title-summary::-webkit-details-marker { display:none; }
+        .ov-title-summary .ov-caret { transition:transform 0.2s; color:var(--text-sub); font-size:0.8rem; }
+        .ov-title-node[open] > .ov-title-summary .ov-caret { transform:rotate(90deg); }
+        .ov-title-summary .ov-range { font-weight:400; color:var(--text-sub); font-size:0.78rem; margin-left:8px; }
+        .ov-title-body { padding:10px 4px 4px 14px; }
+        .ov-chapter { margin-bottom:6px; }
+        .ov-chapter-summary { cursor:pointer; list-style:none; font-size:0.85rem; font-weight:700; color:var(--text-main); padding:8px 4px; }
+        .ov-chapter-summary::-webkit-details-marker { display:none; }
+        .ov-chapter-body { padding:4px 0 4px 14px; }
+        .ov-part-label { font-size:0.8rem; font-weight:700; color:var(--text-sub); margin:8px 0 4px; }
+        .ov-section-btn {
+            display:inline-block; margin:3px 4px 3px 0; padding:5px 10px; border-radius:8px;
+            background:var(--card-bg); border:1px solid var(--disabled); color:var(--primary);
+            font-size:0.8rem; cursor:pointer; font-family:inherit;
+        }
+        .ov-section-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
     </style>
 </head>
 <body data-theme="light">
@@ -180,26 +246,45 @@
         <button onclick="toggleTheme()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;" title="สลับธีม">🌓</button>
     </div>
 
-    <!-- SCREEN: เลือกหมวด -->
+    <!-- SCREEN: เลือกหมวด (Grouped by ประมวลกฎหมาย) -->
     <section id="screen-category" class="screen active">
         <h2>เลือกหมวดวิชากฎหมาย</h2>
-        <div class="menu-grid" id="category-grid"></div>
+        <div id="category-grid"></div>
     </section>
 
-    <!-- SCREEN: เมนูหลักหมวด -->
+    <!-- SCREEN: เมนูหลักวิชา (4 การ์ด) -->
     <section id="screen-home" class="screen">
-        <button class="back-nav" onclick="navTo('screen-category')">← เปลี่ยนหมวดวิชา</button>
+        <button class="back-nav" onclick="goCategoryGroups()">← เปลี่ยนหมวดวิชา</button>
         <div id="home-content"></div>
+    </section>
+
+    <!-- SCREEN: ภาพรวมวิชา / องค์ประกอบ (Tree + Deep Link) -->
+    <section id="screen-overview" class="screen">
+        <button class="back-nav" onclick="goSubjectHome()">← กลับเมนูหลัก</button>
+        <h2 id="overview-title" style="font-size:1.2rem;"></h2>
+        <p style="color:var(--text-sub);font-size:0.85rem;margin-top:-8px;">แตะหัวข้อ "ลักษณะ" เพื่อขยายดูหมวด/ส่วน/มาตรา แล้วแตะเลขมาตราเพื่อกระโดดไปยัง Flash Card ทันที</p>
+        <div class="content-block" id="overview-body"></div>
     </section>
 
     <!-- SCREEN: Flash Card -->
     <section id="screen-flash" class="screen">
-        <button class="back-nav" onclick="navTo('screen-home')">← กลับเมนูหลัก</button>
+        <button class="back-nav" onclick="goSubjectHome()">← กลับเมนูหลัก</button>
+
         <div class="content-block" style="margin-bottom:16px;">
-            <label style="font-weight:bold;display:block;margin-bottom:8px;"> ค้นหามาตรา / คำสำคัญ</label>
-            <input type="text" id="flash-search-input" class="search-box" placeholder="เช่น มาตรา 420 หรือ เจตนา" oninput="performSearchFlash(this.value)" onkeydown="searchFlashOnEnter(event)">
-            <div id="flash-search-results" style="margin-top:10px;"></div>
+            <div class="tab-row">
+                <button id="flash-tab-btn-keyword" class="tab-btn" onclick="setFlashTab('keyword')">🔍 ค้นหาคำ/เลขมาตรา</button>
+                <button id="flash-tab-btn-browse"  class="tab-btn" onclick="setFlashTab('browse')">📂 ค้นหาตามหมวด/ลักษณะ</button>
+            </div>
+            <div id="flash-tab-panel-keyword" class="tab-panel">
+                <input type="text" id="flash-search-input" class="search-box" placeholder="เช่น มาตรา 420 หรือ เจตนา" oninput="performSearchFlash(this.value)" onkeydown="searchFlashOnEnter(event)">
+                <div id="flash-search-results" style="margin-top:10px;"></div>
+            </div>
+            <div id="flash-tab-panel-browse" class="tab-panel">
+                <p style="color:var(--text-sub);font-size:0.8rem;margin:0 0 10px;">แตะ "ลักษณะ" เพื่อขยายดูหมวด/ส่วน แล้วแตะเลขมาตราเพื่อไปดู Flash Card ทันที</p>
+                <div id="flash-browse-list"></div>
+            </div>
         </div>
+
         <div class="progress-container"><div id="pb" class="progress-bar"></div></div>
         <div class="card-wrapper">
             <div class="flashcard" id="flashcard-main" onclick="nextPage()">
@@ -221,53 +306,78 @@
 
     <!-- SCREEN: รายการ Deka -->
     <section id="screen-deka-list" class="screen">
-        <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
+        <button class="back-nav" onclick="goSubjectHome()">← กลับ</button>
         <h2 id="deka-list-title" style="font-size:1.2rem;"></h2>
+
         <div class="content-block" style="margin-bottom:16px;">
-            <label style="font-weight:bold;display:block;margin-bottom:8px;"> ค้นหาฎีกา / คำสำคัญ</label>
-            <input type="text" id="deka-search-input" class="search-box" placeholder="เช่น ละเมิด หรือ นิติกรรม" oninput="performSearchDeka(this.value)" onkeydown="searchDekaOnEnter(event)">
-            <div id="deka-search-results" style="margin-top:10px;"></div>
+            <div class="tab-row">
+                <button id="deka-tab-btn-keyword" class="tab-btn" onclick="setDekaTab('keyword')">🔍 ค้นหาคำ/เลขมาตรา</button>
+                <button id="deka-tab-btn-browse"  class="tab-btn" onclick="setDekaTab('browse')">📂 ค้นหาตามหมวด/ลักษณะ</button>
+            </div>
+            <div id="deka-tab-panel-keyword" class="tab-panel">
+                <input type="text" id="deka-search-input" class="search-box" placeholder="เช่น ละเมิด หรือ นิติกรรม" oninput="performSearchDeka(this.value)" onkeydown="searchDekaOnEnter(event)">
+                <div id="deka-search-results" style="margin-top:10px;"></div>
+            </div>
+            <div id="deka-tab-panel-browse" class="tab-panel">
+                <p style="color:var(--text-sub);font-size:0.8rem;margin:0 0 10px;"> แตะหมวดเพื่อขยายดูตามมาตรา</p>
+                <div id="deka-browse-list"></div>
+            </div>
         </div>
+
         <div id="deka-items"></div>
     </section>
 
     <!-- SCREEN: ดู Deka รายชิ้น -->
     <section id="screen-deka-view" class="screen">
-        <button class="back-nav" onclick="navTo('screen-deka-list')">← กลับรายการ</button>
+        <button class="back-nav" onclick="goDekaList()">← กลับรายการ</button>
         <div id="deka-content"></div>
         <button class="fab" onclick="goToRelatedCode()">Code</button>
     </section>
 
     <!-- SCREEN: รายการ Writing -->
     <section id="screen-writing-list" class="screen">
-        <button class="back-nav" onclick="navTo('screen-home')">← กลับ</button>
+        <button class="back-nav" onclick="goSubjectHome()">← กลับ</button>
         <h2 id="writing-list-title" style="font-size:1.2rem;"></h2>
         <div id="writing-items"></div>
     </section>
 
     <!-- SCREEN: ฝึกเขียน Writing -->
     <section id="screen-writing-view" class="screen">
-        <button class="back-nav" onclick="navTo('screen-writing-list')">← กลับรายการ</button>
+        <button class="back-nav" onclick="goWritingList()">← กลับรายการ</button>
         <div id="writing-content"></div>
     </section>
 
 </div>
 
+<!-- MODAL: ภาพรวมประมวล (Mindmap ต่อกลุ่มประมวลกฎหมาย) -->
+<div id="mindmap-modal" class="modal-overlay" onclick="closeMindmapModal()">
+    <div class="modal-box content-block" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="mindmap-modal-title" style="margin:0;"></h3>
+            <button class="modal-close" onclick="closeMindmapModal()">✕</button>
+        </div>
+        <div id="mindmap-modal-body"></div>
+    </div>
+</div>
+
 <script>
 /* ============================================================
-   UTILITY — แปลง \n เป็น <br> สำหรับ innerHTML
-   ใช้ฟังก์ชันนี้ทุกที่ที่เอาข้อความจาก JSON ไปใส่ innerHTML
+   UTILITY
    ============================================================ */
 function nl(text) {
   if (!text) return "";
-  // แปลง literal \n\n หรือ \n → <br>
-  return String(text)
-    .replace(/\\n/g, "\n")   // กรณี JSON เก็บเป็น \\n (escaped)
-    .replace(/\n/g, "<br>"); // แปลง newline จริง → <br>
+  return String(text).replace(/\\n/g, "\n").replace(/\n/g, "<br>");
+}
+function escJS(str) {
+  return String(str == null ? "" : str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+}
+function escHTML(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /* ============================================================
-   QCE_CONFIG
+   QCE_CONFIG (ไม่เปลี่ยนจากเดิม)
    ============================================================ */
 const QCE_CONFIG = {
   issue: { maxPoints:4, triggerPhrases:["ประเด็น","มีประเด็น","ต้องพิจารณา","พิจารณาว่า","ต้องวินิจฉัย","วินิจฉัยว่า","ถามว่า","มีปัญหาว่า"], thFull:0.22, thHalf:0.08, scoreFull:4, scoreHalf:2, scoreNone:0 },
@@ -285,15 +395,58 @@ const QCE_CONFIG = {
 };
 
 /* ============================================================
-   STATE
+   DATA (โหลดจาก data.json ที่ผู้ใช้มีอยู่แล้ว)
    ============================================================ */
-let DATA           = {};
-let currentCat     = null;
-let currentCards   = [];
-let currentCardIdx = 0;
-let currentPageIdx = 0;
+let DATA = {};
+
+/* ============================================================
+   ROUTE / STATE
+   ============================================================ */
+const ROUTE_KEY = "slb_route_v1";
+
+const DEFAULT_ROUTE = {
+  screen: "screen-category",
+  catKey: null,
+  cardIdx: 0,
+  pageIdx: 0,
+  dekaIdx: 0,
+  writingIdx: 0,
+  flashTab: "keyword",
+  dekaTab: "keyword",
+};
+
+let route = { ...DEFAULT_ROUTE };
 let currentFontSize = 1.0;
-let currentDekaIdx  = 0;
+
+let pendingFlashQuery = null;
+let pendingDekaQuery = null;
+
+function loadRouteFromStorage() {
+  try {
+    const raw = sessionStorage.getItem(ROUTE_KEY);
+    if (raw) return { ...DEFAULT_ROUTE, ...JSON.parse(raw) };
+  } catch (e) {}
+  return { ...DEFAULT_ROUTE };
+}
+
+function persistRoute() {
+  try { sessionStorage.setItem(ROUTE_KEY, JSON.stringify(route)); } catch (e) {}
+}
+
+function go(partial, opts) {
+  opts = opts || {};
+  route = { ...route, ...partial };
+  persistRoute();
+  if (opts.replace) window.history.replaceState(route, "");
+  else window.history.pushState(route, "");
+  render();
+}
+
+window.addEventListener("popstate", function (e) {
+  route = e.state ? { ...DEFAULT_ROUTE, ...e.state } : loadRouteFromStorage();
+  persistRoute();
+  render();
+});
 
 /* ============================================================
    BOOT
@@ -303,85 +456,467 @@ async function loadData() {
     const res = await fetch("data.json");
     if (!res.ok) throw new Error(`HTTP ${res.status} — ไม่พบไฟล์`);
     const json = await res.json();
-    DATA = json.categories;
-    buildCategoryMenu();
+    DATA = json;
+    if (!DATA.categories) DATA.categories = {};
+    if (!DATA.groups) DATA.groups = {};
+
+    route = window.history.state && window.history.state.screen
+      ? { ...DEFAULT_ROUTE, ...window.history.state }
+      : loadRouteFromStorage();
+
+    if (route.catKey && !DATA.categories[route.catKey]) {
+      route = { ...DEFAULT_ROUTE };
+    }
+
+    window.history.replaceState(route, "");
     document.getElementById("loading-overlay").style.display = "none";
     document.getElementById("app").style.display = "block";
+    render();
   } catch (err) {
     document.getElementById("loading-overlay").innerHTML = `
       <div class="load-error">❌ โหลด data.json ไม่สำเร็จ<br>
-      <code>${err.message}</code>
+      <code>${escHTML(err.message)}</code>
       ตรวจสอบว่า <b>data.json</b> อยู่ในโฟลเดอร์เดียวกับ HTML<br>
       และเปิดผ่าน <b>Live Server</b> (Go Live) ใน VS Code</div>
       <button class="retry-btn" onclick="location.reload()">🔄 ลองใหม่</button>`;
   }
 }
 
-function buildCategoryMenu() {
-  document.getElementById("category-grid").innerHTML =
-    Object.entries(DATA).map(([key, cat]) => `
-      <button class="main-btn" onclick="selectCategory('${key}')">
-        <div class="icon-box">${cat.icon || "📚"}</div>
-        <div><h3 style="margin:0;">${cat.label}</h3></div>
-      </button>`).join("");
+/* ============================================================
+   RENDER DISPATCH
+   ============================================================ */
+function render() {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const screenEl = document.getElementById(route.screen);
+  if (screenEl) screenEl.classList.add("active");
+  window.scrollTo(0, 0);
+
+  const cat = route.catKey ? DATA.categories[route.catKey] : null;
+
+  if (route.screen === "screen-category") buildCategoryMenu();
+  else if (route.screen === "screen-home" && cat) buildHomeContent(cat);
+  else if (route.screen === "screen-overview" && cat) buildOverviewScreen(cat);
+  else if (route.screen === "screen-flash" && cat) {
+    buildFlashSearchUI(cat);
+    renderCard(cat);
+  }
+  else if (route.screen === "screen-deka-list" && cat) {
+    document.getElementById("deka-list-title").innerText = `ฎีกาสำคัญ — ${cat.label}`;
+    buildDekaSearchUI(cat);
+    buildDekaItems(cat);
+  }
+  else if (route.screen === "screen-deka-view" && cat) viewDekaRender(cat);
+  else if (route.screen === "screen-writing-list" && cat) buildWritingItems(cat);
+  else if (route.screen === "screen-writing-view" && cat) openWritingRender(cat);
 }
 
-/* ============================================================
-   NAVIGATION
-   ============================================================ */
-function navTo(id) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  window.scrollTo(0, 0);
-}
 function toggleTheme() {
   document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
 }
-
-/* ============================================================
-   FONT SIZE
-   ============================================================ */
 function changeFontSize(delta) {
-  currentFontSize += delta;
-  if (currentFontSize < 0.8) currentFontSize = 0.8;
-  if (currentFontSize > 1.6) currentFontSize = 1.6;
+  currentFontSize = Math.min(1.6, Math.max(0.8, currentFontSize + delta));
   document.getElementById("app").style.fontSize = currentFontSize + "rem";
 }
 
 /* ============================================================
-   CATEGORY
+   NAVIGATION HELPERS
    ============================================================ */
+function goCategoryGroups() { go({ screen: "screen-category" }); }
+function goSubjectHome()    { go({ screen: "screen-home" }); }
+function goDekaList()       { go({ screen: "screen-deka-list" }); }
+function goWritingList()    { go({ screen: "screen-writing-list" }); }
+
 function selectCategory(key) {
-  currentCat = key;
-  const cat = DATA[key];
+  go({
+    screen: "screen-home", catKey: key,
+    cardIdx: 0, pageIdx: 0, dekaIdx: 0, writingIdx: 0,
+    flashTab: "keyword", dekaTab: "keyword",
+  });
+}
+
+function startFlash()        { go({ screen: "screen-flash", cardIdx: 0, pageIdx: 0, flashTab: "keyword" }); }
+function openDekaList()      { go({ screen: "screen-deka-list", dekaTab: "keyword" }); }
+function openWritingList2()  { go({ screen: "screen-writing-list" }); }
+function openSubjectOverview() { go({ screen: "screen-overview" }); }
+
+/* ============================================================
+   หน้าแรกจัดกลุ่มตามประมวลกฎหมาย + ปุ่มภาพรวมประมวล
+   ============================================================ */
+function groupCategories() {
+  const groupDefs = DATA.groups || {};
+  const groups = {};
+  Object.entries(DATA.categories).forEach(([key, cat]) => {
+    const gKey = cat.group || "_ungrouped";
+    if (!groups[gKey]) {
+      const def = groupDefs[gKey] || {};
+      groups[gKey] = {
+    key: gKey,
+    label: def.label || (
+        gKey === "criminal"
+            ? "กฎหมายอาญา"
+            : "กฎหมายแพ่งและพาณิชย์"
+    ),
+    icon: def.icon || (
+        gKey === "criminal"
+            ? "➤"
+            : "➤"
+    ),
+    mindmapNodes: def.mindmapNodes || null,
+    catKeys: []
+};
+      
+    }
+    groups[gKey].catKeys.push(key);
+  });
+  return groups;
+}
+
+function buildCategoryMenu() {
+  const groups = groupCategories();
+  document.getElementById("category-grid").innerHTML = Object.values(groups).map(g => `
+    <div class="group-block content-block">
+      <div class="group-header">
+        <h3>${g.icon} ${escHTML(g.label)}</h3>
+        <button class="btn-mindmap" onclick="openGroupMindmap('${escJS(g.key)}')">🗺️ ภาพรวมประมวล</button>
+      </div>
+      <div class="menu-grid">
+        ${g.catKeys.map(key => {
+          const cat = DATA.categories[key];
+          return `
+            <button class="main-btn" onclick="selectCategory('${escJS(key)}')">
+              <div class="icon-box">${cat.icon || "📚"}</div>
+              <div><h3 style="margin:0;">${escHTML(cat.label)}</h3>
+                   <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.flashCards||[]).length} มาตรา</p></div>
+            </button>`;
+        }).join("")}
+      </div>
+    </div>`).join("");
+}
+
+function renderMindmapTree(nodes) {
+  return `<ul class="mindmap-tree root-list">${nodes.map(n => `
+    <li>
+      <span class="tree-label">${escHTML(n.label)}</span>
+      ${n.children && n.children.length ? `<ul>${n.children.map(c => `<li><span class="tree-label">${escHTML(c.label)}</span></li>`).join("")}</ul>` : ""}
+    </li>`).join("")}</ul>`;
+}
+
+function openGroupMindmap(gKey) {
+  const groups = groupCategories();
+  const g = groups[gKey];
+  if (!g) return;
+  let nodes = g.mindmapNodes;
+  if (!nodes) {
+    nodes = g.catKeys.map(key => {
+      const cat = DATA.categories[key];
+      const subCats = [...new Set((cat.flashCards || []).map(c => c.category).filter(Boolean))];
+      return { label: cat.label, children: subCats.map(c => ({ label: c })) };
+    });
+  }
+  document.getElementById("mindmap-modal-title").innerText = `${g.icon} ภาพรวม ${g.label}`;
+  document.getElementById("mindmap-modal-body").innerHTML = renderMindmapTree(nodes);
+  document.getElementById("mindmap-modal").classList.add("active");
+}
+function closeMindmapModal() {
+  document.getElementById("mindmap-modal").classList.remove("active");
+}
+
+/* ============================================================
+   หน้าเมนูหลักของวิชา (4 การ์ด)
+   ============================================================ */
+function buildHomeContent(cat) {
   document.getElementById("home-content").innerHTML = `
-    <h2 style="margin-top:0;">${cat.label}</h2>
+    <h2 style="margin-top:0;">${escHTML(cat.label)}</h2>
     <div class="menu-grid">
       <button class="main-btn" onclick="startFlash()">
         <div class="icon-box">🗂️</div>
         <div><h3 style="margin:0;">Flash Cards</h3>
-             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${cat.flashCards.length} การ์ด</p></div>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.flashCards||[]).length} การ์ด</p></div>
       </button>
       <button class="main-btn" onclick="openDekaList()">
         <div class="icon-box">📋</div>
         <div><h3 style="margin:0;">ฎีกาสำคัญ</h3>
-             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${cat.dekaList.length} เรื่อง</p></div>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.dekaList||[]).length} เรื่อง</p></div>
       </button>
-      <button class="main-btn" onclick="openWritingList()">
+      <button class="main-btn" onclick="openWritingList2()">
         <div class="icon-box">✍️</div>
         <div><h3 style="margin:0;">ฝึกวินิจฉัย (IRAC)</h3>
-             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${cat.writingProblems.length} โจทย์</p></div>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.writingProblems||[]).length} โจทย์</p></div>
+      </button>
+      <button class="main-btn" onclick="openSubjectOverview()">
+        <div class="icon-box">🗺️</div>
+        <div><h3 style="margin:0;">ภาพรวมวิชา / องค์ประกอบ</h3>
+             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">Tree View</p></div>
       </button>
     </div>`;
-  navTo("screen-home");
 }
 
 /* ============================================================
-   SEARCH — ค้นหามาตรา / ฎีกา / label ที่แปะไว้ในการ์ด
-   วางกล่องค้นหาไว้ด้านบนของแต่ละส่วน (Flash Card และ Deka) แยกกัน
+   ภาพรวมวิชา (บรรพ > ลักษณะ > หมวด > ส่วน > มาตรา)
+   ------------------------------------------------------------
+   ค่า default จะแสดง "เฉพาะหัวข้อลักษณะ" เท่านั้น (ยุบ/พับไว้)
+   ผู้ใช้ต้องแตะที่ชื่อลักษณะเพื่อขยายดู หมวด/ส่วน/มาตรา ข้างใน
+   ถ้า cat.overview.root ถูกกำหนดไว้ตรงๆ ใน data.json จะใช้ค่านั้น
+   ถ้าไม่มี จะ auto-generate จาก flashCards โดยอ่าน field ต่อไปนี้
+   ของแต่ละการ์ด (ทุก field เป็น optional, มี fallback):
+     card.book      -> ชื่อบรรพ  (เช่น "บรรพ 1 หลักทั่วไป")
+     card.category  -> ชื่อลักษณะ (เช่น "ลักษณะ 2 บุคคล")   [ใช้ field เดิม]
+     card.chapter   -> ชื่อหมวด   (เช่น "หมวด 1 บุคคลธรรมดา")
+     card.part      -> ชื่อส่วน   (เช่น "ส่วนที่ 1 สภาพบุคคล")
+     card.section   -> เลขมาตรา (ใช้ jump ไป Flash Card)
+
+   ฟังก์ชัน buildOverviewRoot / renderOverviewTree ชุดนี้ยังถูกใช้ซ้ำ
+   เป็นต้นไม้ "ค้นหาตามหมวด/ลักษณะ" ของ Flash Card (แท็บ browse)
+   เพื่อให้พฤติกรรมเหมือนกันทุกจุด: โชว์ "ลักษณะ" ก่อน (ยุบ)
+   แตะแล้วค่อยขยายเป็น หมวด/ส่วน/มาตรา (ก็ยุบซ้อนอยู่ข้างในเช่นกัน)
    ============================================================ */
-function escJS(str) {
-  return String(str == null ? "" : str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ");
+function buildOverviewRoot(cat) {
+  if (cat.overview && cat.overview.root) return cat.overview.root;
+
+  const NO_BOOK = "ทั้งหมด";
+  const bookMap = new Map(); // book -> Map(title -> Map(chapter -> Map(part -> [cards])))
+
+  (cat.flashCards || []).forEach(card => {
+    const bookKey    = card.book || NO_BOOK;
+    const titleKey   = card.category || "ไม่ระบุลักษณะ";
+    const chapterKey = card.chapter || "";
+    const partKey    = card.part || "";
+
+    if (!bookMap.has(bookKey)) bookMap.set(bookKey, new Map());
+    const titleMap = bookMap.get(bookKey);
+
+    if (!titleMap.has(titleKey)) titleMap.set(titleKey, new Map());
+    const chapterMap = titleMap.get(titleKey);
+
+    if (!chapterMap.has(chapterKey)) chapterMap.set(chapterKey, new Map());
+    const partMap = chapterMap.get(chapterKey);
+
+    if (!partMap.has(partKey)) partMap.set(partKey, []);
+    partMap.get(partKey).push(card);
+  });
+
+  const books = [...bookMap.entries()].map(([bookLabel, titleMap]) => {
+    const titles = [...titleMap.entries()].map(([titleLabel, chapterMap]) => {
+      const chapters = [...chapterMap.entries()].map(([chapterLabel, partMap]) => {
+        const parts = [...partMap.entries()].map(([partLabel, cards]) => ({
+          label: partLabel,
+          sections: cards.map(c => ({
+            label: `${c.title || ""}`.trim() || `มาตรา ${c.section}`,
+            section: c.section,
+          })),
+        }));
+        // ช่วงมาตราของหมวดนี้ (สำหรับแสดงบอกช่วงเลขมาตรา)
+        const allSecs = parts.flatMap(p => p.sections.map(s => s.section)).filter(Boolean);
+        return { label: chapterLabel, parts, range: sectionRangeLabel(allSecs) };
+      });
+      const allSecsTitle = chapters.flatMap(c => c.parts.flatMap(p => p.sections.map(s => s.section))).filter(Boolean);
+      return { label: titleLabel, chapters, range: sectionRangeLabel(allSecsTitle) };
+    });
+    return { label: bookLabel, titles, showBookLabel: bookLabel !== NO_BOOK };
+  });
+
+  return { books };
+}
+
+function sectionRangeLabel(secs) {
+  if (!secs || secs.length === 0) return "";
+  // เรียงตามตัวเลขมาตรา (รองรับรูปแบบ "193/1" ด้วยการเทียบเป็นตัวเลขคร่าวๆ)
+  const toNum = s => parseFloat(String(s).replace("/", "."));
+  const sorted = [...secs].sort((a, b) => toNum(a) - toNum(b));
+  const first = sorted[0], last = sorted[sorted.length - 1];
+  return first === last ? `ม.${first}` : `ม.${first}–${last}`;
+}
+
+/**
+ * เรนเดอร์ต้นไม้ภาพรวม: แสดงเฉพาะหัวข้อ "ลักษณะ" ตอนเปิดหน้า (พับหมวด/ส่วน/มาตราไว้)
+ * ใช้ <details>/<summary> ของ native HTML เพื่อ toggle เปิด-ปิดโดยไม่ต้องเขียน JS state เพิ่ม
+ * ใช้ร่วมกันทั้งหน้า "ภาพรวมวิชา" และแท็บ "ค้นหาตามหมวด/ลักษณะ" ของ Flash Card
+ */
+function renderOverviewTree(root) {
+  const books = root.books || [];
+  return books.map(book => `
+    <div class="ov-book">
+      ${book.showBookLabel ? `<div class="ov-book-title">${escHTML(book.label)}</div>` : ""}
+      ${book.titles.map(renderTitleNode).join("")}
+    </div>`).join("");
+}
+
+function renderTitleNode(title) {
+  return `
+    <details class="ov-title-node">
+      <summary class="ov-title-summary">
+        <span>${escHTML(title.label)} ${title.range ? `<span class="ov-range">${escHTML(title.range)}</span>` : ""}</span>
+        <span class="ov-caret">▶</span>
+      </summary>
+      <div class="ov-title-body">
+        ${title.chapters.map(renderChapterNode).join("")}
+      </div>
+    </details>`;
+}
+
+function renderChapterNode(chapter) {
+  // ถ้าไม่มีชื่อหมวด (การ์ดไม่ได้ระบุ chapter) ให้ข้ามชั้นหมวด แสดงส่วน/มาตราตรงๆ
+  const hasChapterLabel = Boolean(chapter.label);
+  const body = chapter.parts.map(renderPartNode).join("");
+  if (!hasChapterLabel) return body;
+  return `
+    <details class="ov-chapter">
+      <summary class="ov-chapter-summary">
+        ${escHTML(chapter.label)} ${chapter.range ? `<span class="ov-range">${escHTML(chapter.range)}</span>` : ""}
+      </summary>
+      <div class="ov-chapter-body">${body}</div>
+    </details>`;
+}
+
+function renderPartNode(part) {
+  const label = part.label ? `<div class="ov-part-label">${escHTML(part.label)}</div>` : "";
+  const btns = part.sections.map(s => `
+    <button type="button" class="ov-section-btn" onclick="jumpToSectionFromOverview('${escJS(s.section)}')" title="ไปดู Flash Card มาตรานี้">
+      ม.${escHTML(s.section)}
+    </button>`).join("");
+  return `<div>${label}<div>${btns}</div></div>`;
+}
+
+function buildOverviewScreen(cat) {
+  document.getElementById("overview-title").innerText = `🗺️ ภาพรวมวิชา: ${cat.label}`;
+  const root = buildOverviewRoot(cat);
+  document.getElementById("overview-body").innerHTML = renderOverviewTree(root);
+}
+
+function jumpToSectionFromOverview(section) {
+  const cat = DATA.categories[route.catKey];
+  if (!cat) return;
+  const idx = (cat.flashCards || []).findIndex(c => String(c.section) === String(section));
+  go({ screen: "screen-flash", cardIdx: idx >= 0 ? idx : 0, pageIdx: 0, flashTab: "keyword" });
+}
+
+/* ============================================================
+   Tabs Search System — ใช้ร่วมกันหน้า Flash และ Deka
+   ============================================================ */
+function setFlashTab(tab) { go({ flashTab: tab }, { replace: true }); }
+function setDekaTab(tab)  { go({ dekaTab: tab }, { replace: true }); }
+
+function activateTabUI(prefix, activeTab) {
+  document.getElementById(`${prefix}-tab-btn-keyword`).classList.toggle("active", activeTab === "keyword");
+  document.getElementById(`${prefix}-tab-btn-browse`).classList.toggle("active", activeTab === "browse");
+  document.getElementById(`${prefix}-tab-panel-keyword`).classList.toggle("active", activeTab === "keyword");
+  document.getElementById(`${prefix}-tab-panel-browse`).classList.toggle("active", activeTab === "browse");
+}
+
+/* ------------------------------------------------------------
+   FLASH CARD — แท็บ "ค้นหาตามหมวด/ลักษณะ"
+   ใช้ต้นไม้เดียวกับหน้า "ภาพรวมวิชา": โชว์ "ลักษณะ" ก่อน (ยุบไว้)
+   แตะแล้วขยายเป็น หมวด > ส่วน > มาตรา (ซ้อนกันแบบยุบ/พับเช่นกัน)
+   ------------------------------------------------------------ */
+function buildFlashSearchUI(cat) {
+  activateTabUI("flash", route.flashTab);
+
+  const input = document.getElementById("flash-search-input");
+  if (pendingFlashQuery !== null) {
+    input.value = pendingFlashQuery;
+    performSearchFlash(pendingFlashQuery);
+    pendingFlashQuery = null;
+  }
+
+  if (route.flashTab === "browse") {
+    const root = buildOverviewRoot(cat);
+    const treeHtml = renderOverviewTree(root);
+    document.getElementById("flash-browse-list").innerHTML = treeHtml && treeHtml.trim().length
+      ? treeHtml
+      : `<p class="search-empty">ยังไม่มีข้อมูลหมวด/ลักษณะสำหรับวิชานี้</p>`;
+  }
+}
+
+/* ------------------------------------------------------------
+   DEKA — แท็บ "ค้นหาตามหมวด/ลักษณะ"
+   โชว์สถิติเป็นหมวดก่อน (เรียงจากจำนวนฎีกามากไปน้อย)
+   หมวดที่ยังไม่ระบุ ("ไม่ระบุหมวด") จะอยู่ล่างสุดเสมอ ไม่ว่าจะมีกี่เรื่อง
+   แตะหมวดเพื่อขยาย แล้วข้างในจะถูกยุบซ้อนอีกชั้นตาม "มาตรา" ที่เกี่ยวข้อง
+   ------------------------------------------------------------ */
+function getDekaSectionsForItem(d) {
+  const secs = new Set();
+  extractSectionsFromText(d.statute).forEach(n => secs.add(n));
+  extractSectionsFromText(d.principle).forEach(n => secs.add(n));
+  extractSectionsFromText(d.facts).forEach(n => secs.add(n));
+  extractSectionsFromText(d.holding).forEach(n => secs.add(n));
+  (d.tags || []).forEach(t => { if (/^\d+(\/\d+)?$/.test(String(t).trim())) secs.add(String(t).trim()); });
+  return [...secs];
+}
+
+function buildDekaBrowseTree(cat) {
+  const list = cat.dekaList || [];
+  const NO_CAT = "ไม่ระบุหมวด";
+  const NO_SEC = "ไม่ระบุมาตรา";
+
+  const catMap = new Map(); // catLabel -> [{d, idx}]
+  list.forEach((d, idx) => {
+    const g = (d.tags && d.tags[0]) || NO_CAT;
+    if (!catMap.has(g)) catMap.set(g, []);
+    catMap.get(g).push({ d, idx });
+  });
+
+  const entries = [...catMap.entries()];
+  // เรียงหมวดที่ระบุแล้วจากสถิติ (จำนวนฎีกา) มากไปน้อย, หมวด "ไม่ระบุ" ตกไปอยู่ล่างสุดเสมอ
+  const specified   = entries.filter(([g]) => g !== NO_CAT).sort((a, b) => b[1].length - a[1].length);
+  const unspecified = entries.filter(([g]) => g === NO_CAT);
+  const ordered = [...specified, ...unspecified];
+
+  if (ordered.length === 0) return "";
+
+  return ordered.map(([g, items]) => {
+    // ยุบซ้อนอีกชั้นตามมาตรา ภายในหมวดเดียวกัน
+    const secMap = new Map();
+    items.forEach(({ d, idx }) => {
+      const secs = getDekaSectionsForItem(d);
+      const secKey = secs.length ? secs[0] : NO_SEC;
+      if (!secMap.has(secKey)) secMap.set(secKey, []);
+      secMap.get(secKey).push({ d, idx });
+    });
+    const secEntries = [...secMap.entries()];
+    const numbered   = secEntries.filter(([s]) => s !== NO_SEC)
+      .sort((a, b) => parseFloat(String(a[0]).replace("/", ".")) - parseFloat(String(b[0]).replace("/", ".")));
+    const unnumbered = secEntries.filter(([s]) => s === NO_SEC);
+    const secOrdered = [...numbered, ...unnumbered];
+
+    return `
+      <details class="accordion">
+        <summary style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <span>${escHTML(g)}</span>
+          <span class="tag tag-purple deka-stat-badge" style="margin:0;">${items.length} </span>
+        </summary>
+        <div class="accordion-body">
+          ${secOrdered.map(([secLabel, secItems]) => `
+            <details class="accordion accordion-nested">
+              <summary>${secLabel === NO_SEC ? escHTML(NO_SEC) : "ม." + escHTML(secLabel)} <span style="color:var(--text-sub);font-weight:400;">(${secItems.length})</span></summary>
+              <div class="accordion-body">
+                ${secItems.map(({ d, idx }) => `
+                  <button type="button" class="search-result-item" onclick="jumpToDeka(${idx})">
+                    <span>${escHTML(d.title)}</span>
+                    <span style="color:var(--text-sub);">→</span>
+                  </button>`).join("")}
+              </div>
+            </details>`).join("")}
+        </div>
+      </details>`;
+  }).join("");
+}
+
+function buildDekaSearchUI(cat) {
+  activateTabUI("deka", route.dekaTab);
+
+  const input = document.getElementById("deka-search-input");
+  if (pendingDekaQuery !== null) {
+    input.value = pendingDekaQuery;
+    performSearchDeka(pendingDekaQuery);
+    pendingDekaQuery = null;
+  }
+
+  if (route.dekaTab === "browse") {
+    const treeHtml = buildDekaBrowseTree(cat);
+    document.getElementById("deka-browse-list").innerHTML = treeHtml && treeHtml.trim().length
+      ? treeHtml
+      : `<p class="search-empty">ยังไม่มีฎีกาสำหรับวิชานี้</p>`;
+  }
 }
 
 let lastFlashResults = [];
@@ -392,9 +927,9 @@ function performSearchFlash(query) {
   if (!resultsEl) return;
   const q = (query || "").trim().toLowerCase();
   lastFlashResults = [];
-  if (q.length < 1 || !currentCat) { resultsEl.innerHTML = ""; return; }
+  const cat = DATA.categories[route.catKey];
+  if (q.length < 1 || !cat) { resultsEl.innerHTML = ""; return; }
 
-  const cat = DATA[currentCat];
   const results = [];
   (cat.flashCards || []).forEach((card, idx) => {
     const secMatch   = card.section && String(card.section).toLowerCase().includes(q);
@@ -408,9 +943,8 @@ function performSearchFlash(query) {
       }
       if (p.type === "law" && p.content && String(p.content).toLowerCase().includes(q)) elemMatch = true;
     });
-    // fallback: match any field in the card in case the data schema differs
     let rawMatch = false;
-    try { rawMatch = JSON.stringify(card).toLowerCase().includes(q); } catch (e) { rawMatch = false; }
+    try { rawMatch = JSON.stringify(card).toLowerCase().includes(q); } catch (e) {}
 
     if (secMatch || titleMatch || elemMatch || rawMatch) {
       results.push({ idx, label: `มาตรา ${card.section || "?"} — ${card.title || "ไม่มีชื่อ"}` });
@@ -418,19 +952,15 @@ function performSearchFlash(query) {
   });
 
   lastFlashResults = results;
-
   if (results.length === 0) {
-    resultsEl.innerHTML = `<div class="search-empty">ไม่พบผลลัพธ์ที่ตรงกับ "${query}"</div>`;
+    resultsEl.innerHTML = `<div class="search-empty">ไม่พบผลลัพธ์ที่ตรงกับ "${escHTML(query)}"</div>`;
     return;
   }
   resultsEl.innerHTML = results.map(r => `
-    <div class="content-block search-result-item" onclick="jumpToFlashCard(${r.idx})">
-      <div>
-        <span class="tag tag-blue">Flash Card</span>
-        <div style="margin-top:6px;font-weight:bold;">${r.label}</div>
-      </div>
+    <button type="button" class="search-result-item" onclick="jumpToFlashCard(${r.idx})">
+      <span><span class="tag tag-blue" style="margin:0 8px 0 0;">Flash Card</span>${escHTML(r.label)}</span>
       <span style="color:var(--text-sub);">→</span>
-    </div>`).join("");
+    </button>`).join("");
 }
 
 function performSearchDeka(query) {
@@ -438,9 +968,9 @@ function performSearchDeka(query) {
   if (!resultsEl) return;
   const q = (query || "").trim().toLowerCase();
   lastDekaResults = [];
-  if (q.length < 1 || !currentCat) { resultsEl.innerHTML = ""; return; }
+  const cat = DATA.categories[route.catKey];
+  if (q.length < 1 || !cat) { resultsEl.innerHTML = ""; return; }
 
-  const cat = DATA[currentCat];
   const results = [];
   (cat.dekaList || []).forEach((d, idx) => {
     const titleMatch     = d.title && String(d.title).toLowerCase().includes(q);
@@ -448,7 +978,7 @@ function performSearchDeka(query) {
     const principleMatch = d.principle && String(d.principle).toLowerCase().includes(q);
     const statuteMatch   = d.statute && String(d.statute).toLowerCase().includes(q);
     let rawMatch = false;
-    try { rawMatch = JSON.stringify(d).toLowerCase().includes(q); } catch (e) { rawMatch = false; }
+    try { rawMatch = JSON.stringify(d).toLowerCase().includes(q); } catch (e) {}
 
     if (titleMatch || tagMatch || principleMatch || statuteMatch || rawMatch) {
       results.push({ idx, label: d.title || "ไม่มีชื่อ" });
@@ -456,19 +986,15 @@ function performSearchDeka(query) {
   });
 
   lastDekaResults = results;
-
   if (results.length === 0) {
-    resultsEl.innerHTML = `<div class="search-empty">ไม่พบผลลัพธ์ที่ตรงกับ "${query}"</div>`;
+    resultsEl.innerHTML = `<div class="search-empty">ไม่พบผลลัพธ์ที่ตรงกับ "${escHTML(query)}"</div>`;
     return;
   }
   resultsEl.innerHTML = results.map(r => `
-    <div class="content-block search-result-item" onclick="jumpToDeka(${r.idx})">
-      <div>
-        <span class="tag tag-orange">ฎีกา</span>
-        <div style="margin-top:6px;font-weight:bold;">${r.label}</div>
-      </div>
+    <button type="button" class="search-result-item" onclick="jumpToDeka(${r.idx})">
+      <span><span class="tag tag-orange" style="margin:0 8px 0 0;">ฎีกา</span>${escHTML(r.label)}</span>
       <span style="color:var(--text-sub);">→</span>
-    </div>`).join("");
+    </button>`).join("");
 }
 
 function searchFlashOnEnter(event) {
@@ -477,7 +1003,6 @@ function searchFlashOnEnter(event) {
   performSearchFlash(event.target.value);
   if (lastFlashResults.length > 0) jumpToFlashCard(lastFlashResults[0].idx);
 }
-
 function searchDekaOnEnter(event) {
   if (event.key !== "Enter") return;
   event.preventDefault();
@@ -486,47 +1011,23 @@ function searchDekaOnEnter(event) {
 }
 
 function quickSearchFlash(term) {
-  navTo("screen-flash");
-  const input = document.getElementById("flash-search-input");
-  if (input) {
-    input.value = term;
-    performSearchFlash(term);
-    setTimeout(() => input.scrollIntoView({ behavior:"smooth", block:"center" }), 50);
-  }
+  pendingFlashQuery = term;
+  go({ screen: "screen-flash", flashTab: "keyword" });
 }
-
 function quickSearchDeka(term) {
-  navTo("screen-deka-list");
-  const input = document.getElementById("deka-search-input");
-  if (input) {
-    input.value = term;
-    performSearchDeka(term);
-    setTimeout(() => input.scrollIntoView({ behavior:"smooth", block:"center" }), 50);
-  }
+  pendingDekaQuery = term;
+  go({ screen: "screen-deka-list", dekaTab: "keyword" });
 }
 
 function jumpToFlashCard(idx) {
-  currentCards   = [...DATA[currentCat].flashCards];
-  currentCardIdx = idx;
-  currentPageIdx = 0;
-  renderCard();
-  navTo("screen-flash");
-  const input   = document.getElementById("flash-search-input");
-  const results = document.getElementById("flash-search-results");
-  if (input) input.value = "";
-  if (results) results.innerHTML = "";
+  go({ screen: "screen-flash", cardIdx: idx, pageIdx: 0, flashTab: "keyword" });
 }
-
 function jumpToDeka(idx) {
-  viewDeka(idx);
-  const input   = document.getElementById("deka-search-input");
-  const results = document.getElementById("deka-search-results");
-  if (input) input.value = "";
-  if (results) results.innerHTML = "";
+  go({ screen: "screen-deka-view", dekaIdx: idx });
 }
 
 /* ============================================================
-   ปุ่มลัด — ไปมาตรา (Code) ที่เกี่ยวข้องกับฎีกา และไปฎีกา (Deka) ที่เกี่ยวข้องกับมาตรา
+   ปุ่มลัด Flash <-> Deka
    ============================================================ */
 function extractSectionsFromText(text) {
   const nums = new Set();
@@ -540,19 +1041,19 @@ function extractSectionsFromText(text) {
   return nums;
 }
 
-// จากหน้า Flash Card → หาฎีกาที่เกี่ยวข้องกับมาตราของการ์ดปัจจุบัน
 function goToRelatedDeka() {
-  if (!currentCat || !currentCards.length) return;
-  const card = currentCards[currentCardIdx];
-  const section = String(card.section || "").trim();
+  const cat = DATA.categories[route.catKey];
+  if (!cat) return;
+  const card = (cat.flashCards || [])[route.cardIdx];
+  const section = card ? String(card.section || "").trim() : "";
   if (!section) return;
   quickSearchDeka(section);
 }
 
-// จากหน้าฎีกา → หามาตรา (Flash Card) ที่เกี่ยวข้องกับฎีกาปัจจุบัน
 function goToRelatedCode() {
-  if (!currentCat) return;
-  const d = DATA[currentCat].dekaList[currentDekaIdx];
+  const cat = DATA.categories[route.catKey];
+  if (!cat) return;
+  const d = (cat.dekaList || [])[route.dekaIdx];
   if (!d) return;
 
   const sections = new Set();
@@ -568,7 +1069,6 @@ function goToRelatedCode() {
   if (sections.size > 0) {
     quickSearchFlash([...sections][0]);
   } else {
-    // ไม่พบเลขมาตราชัดเจน ใช้ tag แรกหรือชื่อเรื่องแทน
     const term = (d.tags && d.tags[0]) || d.title || "";
     quickSearchFlash(term);
   }
@@ -577,43 +1077,38 @@ function goToRelatedCode() {
 /* ============================================================
    FLASH CARDS
    ============================================================ */
-function startFlash() {
-  currentCards   = [...DATA[currentCat].flashCards];
-  currentCardIdx = 0;
-  currentPageIdx = 0;
-  renderCard();
-  navTo("screen-flash");
-  const input   = document.getElementById("flash-search-input");
-  const results = document.getElementById("flash-search-results");
-  if (input) input.value = "";
-  if (results) results.innerHTML = "";
-}
+function renderCard(cat) {
+  const cards = cat.flashCards || [];
+  if (cards.length === 0) {
+    document.getElementById("card-content").innerHTML = `<p style="color:var(--text-sub);">ยังไม่มีการ์ดสำหรับวิชานี้</p>`;
+    return;
+  }
+  const idx  = Math.min(Math.max(route.cardIdx, 0), cards.length - 1);
+  const card = cards[idx];
+  const pageIdx = Math.min(Math.max(route.pageIdx, 0), card.pages.length - 1);
+  const total = cards.length;
 
-function renderCard() {
-  const card  = currentCards[currentCardIdx];
-  const total = currentCards.length;
-
-  document.getElementById("pb").style.width = `${((currentCardIdx + 1) / total) * 100}%`;
+  document.getElementById("pb").style.width = `${((idx + 1) / total) * 100}%`;
 
   const dotsEl = document.getElementById("page-dots");
   dotsEl.innerHTML = card.pages.map((_, i) =>
-    `<div class="page-dot ${i === currentPageIdx ? "active" : ""}"></div>`
+    `<div class="page-dot ${i === pageIdx ? "active" : ""}"></div>`
   ).join("");
 
-  document.getElementById("prevBtn").disabled = currentCardIdx === 0 && currentPageIdx === 0;
+  document.getElementById("prevBtn").disabled = idx === 0 && pageIdx === 0;
   document.getElementById("nextBtn").innerText =
-    currentCardIdx === total - 1 && currentPageIdx === card.pages.length - 1 ? "จบ" : "ถัดไป";
+    idx === total - 1 && pageIdx === card.pages.length - 1 ? "จบ" : "ถัดไป";
 
-  const page = card.pages[currentPageIdx];
+  const page = card.pages[pageIdx];
   const contentEl = document.getElementById("card-content");
 
   if (page.type === "law") {
     contentEl.innerHTML = `
       <div class="fc-header">
-        <div class="fc-section-badge clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(card.section)}')" title="ค้นหามาตรานี้">ม.${card.section}</div>
+        <div class="fc-section-badge clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(card.section)}')" title="ค้นหามาตรานี้">ม.${escHTML(card.section)}</div>
         <div class="fc-title-area">
-          <p class="fc-law-name">${card.title}</p>
-          <p class="fc-subtitle">${card.category || ""} | การ์ด ${currentCardIdx + 1}/${total}</p>
+          <p class="fc-law-name">${escHTML(card.title)}</p>
+          <p class="fc-subtitle">${escHTML(card.category || "")} | การ์ด ${idx + 1}/${total}</p>
         </div>
       </div>
       <div class="fc-body">
@@ -623,10 +1118,10 @@ function renderCard() {
   } else if (page.type === "elements") {
     contentEl.innerHTML = `
       <div class="fc-header">
-        <div class="fc-section-badge clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(card.section)}')" title="ค้นหามาตรานี้">ม.${card.section}</div>
+        <div class="fc-section-badge clickable" onclick="event.stopPropagation(); quickSearchFlash('${escJS(card.section)}')" title="ค้นหามาตรานี้">ม.${escHTML(card.section)}</div>
         <div class="fc-title-area">
-          <p class="fc-law-name">องค์ประกอบของ ${card.title}</p>
-          <p class="fc-subtitle">การ์ด ${currentCardIdx + 1}/${total}</p>
+          <p class="fc-law-name">องค์ประกอบของ ${escHTML(card.title)}</p>
+          <p class="fc-subtitle">การ์ด ${idx + 1}/${total}</p>
         </div>
       </div>
       <div class="fc-body">
@@ -646,48 +1141,53 @@ function renderCard() {
 }
 
 function nextPage() {
-  const card = currentCards[currentCardIdx];
-  if (currentPageIdx < card.pages.length - 1) { currentPageIdx++; renderCard(); }
+  const cat = DATA.categories[route.catKey];
+  const card = (cat.flashCards || [])[route.cardIdx];
+  if (!card) return;
+  if (route.pageIdx < card.pages.length - 1) go({ pageIdx: route.pageIdx + 1 }, { replace: true });
   else nextSection();
 }
 function nextSection() {
-  const card = currentCards[currentCardIdx];
-  if (currentPageIdx < card.pages.length - 1) { currentPageIdx++; renderCard(); }
-  else if (currentCardIdx < currentCards.length - 1) { currentCardIdx++; currentPageIdx = 0; renderCard(); }
+  const cat = DATA.categories[route.catKey];
+  const cards = cat.flashCards || [];
+  const card = cards[route.cardIdx];
+  if (!card) return;
+  if (route.pageIdx < card.pages.length - 1) go({ pageIdx: route.pageIdx + 1 }, { replace: true });
+  else if (route.cardIdx < cards.length - 1) go({ cardIdx: route.cardIdx + 1, pageIdx: 0 }, { replace: true });
 }
 function prevSection() {
-  if (currentPageIdx > 0) { currentPageIdx--; renderCard(); }
-  else if (currentCardIdx > 0) { currentCardIdx--; currentPageIdx = 0; renderCard(); }
+  if (route.pageIdx > 0) go({ pageIdx: route.pageIdx - 1 }, { replace: true });
+  else if (route.cardIdx > 0) go({ cardIdx: route.cardIdx - 1, pageIdx: 0 }, { replace: true });
 }
 function shuffleCards() {
-  currentCards = [...currentCards].sort(() => Math.random() - 0.5);
-  currentCardIdx = 0; currentPageIdx = 0;
-  renderCard();
+  const cat = DATA.categories[route.catKey];
+  const cards = cat.flashCards || [];
+  if (cards.length === 0) return;
+  const randomIdx = Math.floor(Math.random() * cards.length);
+  go({ cardIdx: randomIdx, pageIdx: 0 }, { replace: true });
 }
 
 /* ============================================================
    DEKA
    ============================================================ */
-function openDekaList() {
-  const cat = DATA[currentCat];
-  document.getElementById("deka-list-title").innerText = `ฎีกาสำคัญ — ${cat.label}`;
-  const input   = document.getElementById("deka-search-input");
-  const results = document.getElementById("deka-search-results");
-  if (input) input.value = "";
-  if (results) results.innerHTML = "";
-  document.getElementById("deka-items").innerHTML = cat.dekaList.map((d, i) => `
-    <div class="content-block" style="cursor:pointer;" onclick="viewDeka(${i})">
-      <div style="font-weight:bold;">${d.title}</div>
-      <div style="margin-top:6px;">${d.tags.map(t => `<span class="tag tag-blue clickable" onclick="event.stopPropagation(); quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${t}</span>`).join(" ")}</div>
+function buildDekaItems(cat) {
+  document.getElementById("deka-items").innerHTML = (cat.dekaList || []).map((d, i) => `
+    <button type="button" class="content-block" style="cursor:pointer;display:block;width:100%;text-align:left;border:none;" onclick="jumpToDeka(${i})">
+      <div style="font-weight:bold;">${escHTML(d.title)}</div>
+      <div style="margin-top:6px;">${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="event.stopPropagation(); quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${escHTML(t)}</span>`).join(" ")}</div>
       <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl(d.principle)}</div>
-    </div>`).join("");
-  navTo("screen-deka-list");
+    </button>`).join("") || `<p style="color:var(--text-sub);">ยังไม่มีฎีกาสำหรับวิชานี้</p>`;
 }
 
-function viewDeka(i) {
-  currentDekaIdx = i;
-  const dekaListArr = DATA[currentCat].dekaList;
+function viewDekaRender(cat) {
+  const dekaListArr = cat.dekaList || [];
+  const i = Math.min(Math.max(route.dekaIdx, 0), dekaListArr.length - 1);
   const d = dekaListArr[i];
+  if (!d) {
+    document.getElementById("deka-content").innerHTML = `<p style="color:var(--text-sub);">ไม่พบฎีกา</p>`;
+    return;
+  }
+
   const quizHtml = d.quiz ? `
     <div class="deka-section-label">🧠 คำถามทดสอบความเข้าใจ</div>
     <p class="quiz-question">${nl(d.quiz.question)}</p>
@@ -704,8 +1204,8 @@ function viewDeka(i) {
 
   document.getElementById("deka-content").innerHTML = `
     <div class="deka-card">
-      <h2 style="margin-top:0;font-size:1.1rem;">${d.title}</h2>
-      <div>${d.tags.map(t => `<span class="tag tag-blue clickable" onclick="quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${t}</span>`).join(" ")}</div>
+      <h2 style="margin-top:0;font-size:1.1rem;">${escHTML(d.title)}</h2>
+      <div>${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${escHTML(t)}</span>`).join(" ")}</div>
       <div class="deka-section-label">📜 ตัวบทย่อ</div>
       <div class="deka-principle-box">${nl(d.statute)}</div>
       <div class="deka-section-label">📁 ข้อเท็จจริง</div>
@@ -720,15 +1220,15 @@ function viewDeka(i) {
         <button class="btn btn-primary" onclick="nextDeka()" ${i === dekaListArr.length - 1 ? "disabled" : ""}>ฎีกาถัดไป →</button>
       </div>
     </div>`;
-  navTo("screen-deka-view");
 }
 
 function nextDeka() {
-  const list = DATA[currentCat].dekaList;
-  if (currentDekaIdx < list.length - 1) viewDeka(currentDekaIdx + 1);
+  const cat = DATA.categories[route.catKey];
+  const list = cat.dekaList || [];
+  if (route.dekaIdx < list.length - 1) go({ dekaIdx: route.dekaIdx + 1 }, { replace: true });
 }
 function prevDeka() {
-  if (currentDekaIdx > 0) viewDeka(currentDekaIdx - 1);
+  if (route.dekaIdx > 0) go({ dekaIdx: route.dekaIdx - 1 }, { replace: true });
 }
 
 function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
@@ -738,7 +1238,8 @@ function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
     if (oi === correctIdx) el.classList.add("correct");
     else if (oi === chosenIdx) el.classList.add("wrong");
   });
-  const d = DATA[currentCat].dekaList[dekaIdx];
+  const cat = DATA.categories[route.catKey];
+  const d = cat.dekaList[dekaIdx];
   const isCorrect = chosenIdx === correctIdx;
   const resultEl  = document.getElementById(`quiz-result-${dekaIdx}`);
   document.getElementById(`quiz-result-title-${dekaIdx}`).innerText   = isCorrect ? "✅ ถูกต้อง!" : "❌ ไม่ถูกต้อง";
@@ -749,26 +1250,28 @@ function answerQuiz(dekaIdx, chosenIdx, correctIdx, btn) {
 /* ============================================================
    WRITING / IRAC
    ============================================================ */
-function openWritingList() {
-  const cat = DATA[currentCat];
+function buildWritingItems(cat) {
   document.getElementById("writing-list-title").innerText = `โจทย์ฝึกวินิจฉัย — ${cat.label}`;
-  document.getElementById("writing-items").innerHTML = cat.writingProblems.map((w, i) => `
-    <div class="content-block" style="cursor:pointer;" onclick="openWriting(${i})">
+  document.getElementById("writing-items").innerHTML = (cat.writingProblems || []).map((w, i) => `
+    <button type="button" class="content-block" style="cursor:pointer;display:block;width:100%;text-align:left;border:none;" onclick="openWriting(${i})">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <b>${w.title}</b><span class="tag tag-green">${w.difficulty}</span>
+        <b>${escHTML(w.title)}</b><span class="tag tag-green">${escHTML(w.difficulty)}</span>
       </div>
-      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl(w.problem.substring(0, 90))}…</div>
-    </div>`).join("");
-  navTo("screen-writing-list");
+      <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl((w.problem||"").substring(0, 90))}…</div>
+    </button>`).join("") || `<p style="color:var(--text-sub);">ยังไม่มีโจทย์สำหรับวิชานี้</p>`;
 }
 
-function openWriting(i) {
-  const w   = DATA[currentCat].writingProblems[i];
+function openWriting(i) { go({ screen: "screen-writing-view", writingIdx: i }); }
+
+function openWritingRender(cat) {
+  const i = route.writingIdx;
+  const w = (cat.writingProblems || [])[i];
+  if (!w) { document.getElementById("writing-content").innerHTML = ""; return; }
   const cfg = QCE_CONFIG;
   document.getElementById("writing-content").innerHTML = `
     <div class="content-block">
-      <span class="tag tag-green">${w.difficulty}</span>
-      <h3 style="margin-top:8px;">${w.title}</h3>
+      <span class="tag tag-green">${escHTML(w.difficulty)}</span>
+      <h3 style="margin-top:8px;">${escHTML(w.title)}</h3>
       <p style="line-height:1.9;background:var(--bg);padding:14px;border-radius:12px;white-space:pre-line;">${nl(w.problem)}</p>
       <div class="criteria-box">
         <strong>เกณฑ์การให้คะแนน (IRAC)</strong><br>
@@ -789,7 +1292,6 @@ function openWriting(i) {
       <div id="score-result"></div>
       <div id="model-answer-section"></div>
     </div>`;
-  navTo("screen-writing-view");
 }
 
 async function submitAnswer(i) {
@@ -799,7 +1301,8 @@ async function submitAnswer(i) {
   btn.innerHTML = '<span class="spinner"></span> กำลังประเมินผล…';
   btn.disabled  = true;
   try {
-    const w      = DATA[currentCat].writingProblems[i];
+    const cat = DATA.categories[route.catKey];
+    const w   = cat.writingProblems[i];
     const result = await scoreTextWithModel(text, w.problem, w.modelAnswer);
     document.getElementById("score-result").innerHTML = renderScoreResult(result);
     const ma = w.modelAnswer;
