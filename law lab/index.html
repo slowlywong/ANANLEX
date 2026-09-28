@@ -1,20 +1,113 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-J5BB9G4G62"></script>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VMDBK9NJV9"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-  gtag('config', 'G-J5BB9G4G62');
+  gtag('config', 'G-VMDBK9NJV9');
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socratic Law Lab | Pro Edition</title>
+    <title>LawLex </title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
+      /* ===== BRAND ===== */
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-logo{
+  width:46px;height:46px;flex:none;border-radius:14px;
+  display:grid;place-items:center;font-size:1.5rem;
+  background:linear-gradient(135deg,var(--primary),#8b5cf6);
+  box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 40%,transparent),
+             inset 0 1px 0 rgba(255,255,255,.35);
+}
+.brand-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1;}
+.brand-text h1{
+  margin:0;font-family:'Inter','Sarabun',sans-serif;
+  font-size:1.6rem;font-weight:800;letter-spacing:-.03em;
+  background:linear-gradient(90deg,var(--primary),#8b5cf6);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+}
+.brand-credit{
+  margin-top:5px;padding:0;
+  font-size:.7rem;font-weight:400;letter-spacing:.08em;
+  color:var(--text-sub);
+}
+      /* ===== UI POLISH LAYER ===== */
+:root{
+  --bg:#f5f7fb; --card-bg:#fff; --primary:#3b4cca; --secondary:#16a34a;
+  --accent:#f59e0b; --danger:#dc2626; --text-main:#1e2433; --text-sub:#6b7280;
+  --radius:18px; --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.06);
+  --shadow-hover:0 2px 4px rgba(16,24,40,.06),0 14px 32px rgba(16,24,40,.12);
+  --line:#e5e8f0;
+}
+[data-theme="dark"]{
+  --bg:#0d1117; --card-bg:#161b26; --primary:#7c8cff; --secondary:#22c55e;
+  --danger:#f87171; --line:#262d3d; --disabled:#262d3d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  --shadow-hover:0 14px 32px rgba(0,0,0,.5);
+}
+body{
+  --card:var(--card-bg); --bd:var(--line); --mut:var(--text-sub); --fg:var(--text-main);
+  --ac:var(--primary); --ok:var(--secondary); --bad:var(--danger);
+}
+html{-webkit-text-size-adjust:100%;}
+body{font-family:'Sarabun','Noto Sans Thai',sans-serif;font-size:16px;line-height:1.6;padding:0 16px 96px;}
+.container{max-width:640px;}
+button{-webkit-tap-highlight-color:transparent;}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px;}
+
+/* header ติดขอบบน */
+.header{position:sticky;top:0;z-index:100;margin:0 -16px 20px;padding:12px 16px;
+  background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);}
+.header h1{font-size:1.15rem;letter-spacing:-.01em;}
+.header-actions{display:flex;gap:6px;}
+.icon-btn{min-width:40px;height:40px;padding:0 10px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card-bg);color:var(--text-main);font:inherit;font-weight:700;cursor:pointer;transition:.15s;}
+.icon-btn:hover{border-color:var(--primary);}
+
+/* ปุ่มย้อนกลับเป็น pill */
+.back-nav{padding:8px 14px;margin-bottom:16px;border-radius:999px;background:var(--card-bg);
+  border:1px solid var(--line);font-size:.9rem;transition:.15s;}
+.back-nav:hover{border-color:var(--primary);}
+
+/* การ์ด/ปุ่มเมนู */
+.content-block,.deka-card{border:1px solid var(--line);}
+.main-btn{border:1px solid var(--line);min-height:76px;padding:18px 20px;
+  transition:transform .18s,box-shadow .18s,border-color .18s;}
+.main-btn:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover);border-color:var(--primary);}
+.main-btn:active{transform:scale(.98);}
+.main-btn h3{font-size:1rem;}
+.icon-box{width:48px;height:48px;background:color-mix(in srgb,var(--primary) 10%,var(--card-bg));}
+
+/* ปุ่มทั่วไป */
+.btn{min-height:46px;transition:transform .15s,filter .15s;}
+.btn:hover:not(:disabled){filter:brightness(1.06);transform:translateY(-1px);}
+.btn:active:not(:disabled){transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 65%,#8b5cf6));}
+
+/* แท็บ/ค้นหา/แท็ก */
+.tab-row{background:var(--bg);padding:4px;border-radius:14px;}
+.tab-btn{border:none;background:transparent;border-radius:10px;min-height:42px;transition:.15s;}
+.tab-btn.active{background:var(--card-bg);box-shadow:var(--shadow);color:var(--primary);}
+.search-box{border-radius:14px;min-height:46px;}
+.tag{border-radius:999px;padding:3px 12px;}
+.progress-container{height:8px;}
+.progress-bar{background:linear-gradient(90deg,var(--primary),var(--secondary));}
+.flashcard{border:1px solid var(--line);}
+.fab{bottom:20px;right:16px;box-shadow:var(--shadow-hover);}
+
+/* แถบความคืบหน้าบนหน้าแรก */
+.mini-bar{height:5px;border-radius:99px;background:var(--line);margin-top:8px;overflow:hidden;}
+.mini-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:99px;}
+
+/* เคารพผู้ที่ปิดแอนิเมชัน */
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
         :root {
             --bg: #f4f7f9; --card-bg: #ffffff; --primary: #1a2a6c;
             --secondary: #27ae60; --accent: #f39c12; --danger: #e74c3c;
@@ -250,11 +343,18 @@
 
 <div class="container" id="app" style="display:none;">
 
-    <div class="header">
-        <h1>⚖️ Socratic Law Lab</h1>
-        <button onclick="toggleTheme()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;" title="สลับธีม">🌓</button>
+ <div class="header">
+    <div class="brand">
+        <div class="brand-logo">⚖️</div>
+        <div class="brand-text">
+            <h1>LawLex</h1>
+            <span class="brand-credit">by slowly_m</span>
+        </div>
     </div>
-
+    <div class="header-actions">
+        <button class="icon-btn" onclick="toggleTheme()" aria-label="สลับธีม">🌓</button>
+    </div>
+</div>
     <!-- SCREEN: เลือกหมวด (Grouped by ประมวลกฎหมาย) -->
     <section id="screen-category" class="screen active">
         <h2>เลือกหมวดวิชากฎหมาย</h2>
@@ -490,7 +590,230 @@ async function loadData() {
       <button class="retry-btn" onclick="location.reload()">🔄 ลองใหม่</button>`;
   }
 }
+/* ===== DEKA PRACTICE QUIZ v2 (ฎีกาสำคัญ) ===== */
+const dqStatKey = () => "dekaStats_" + route.catKey;
+function dqLoad(){ try { return JSON.parse(localStorage.getItem(dqStatKey()) || "{}"); } catch(e){ return {}; } }
+function dqSave(s){ try { localStorage.setItem(dqStatKey(), JSON.stringify(s)); } catch(e){} }
+function dqShuffle(a){ return a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map(p => p[1]); }
+const dqEsc = v => escHTML(String(v == null ? "" : v));
 
+let dqS = null;
+
+function dqInjectCSS(){
+  if (document.getElementById("dq-css")) return;
+  const st = document.createElement("style");
+  st.id = "dq-css";
+  st.textContent = `
+  .dq-bar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+  .dq-bar button{flex:1;min-width:130px;padding:12px 16px;border-radius:14px;border:1px solid #8885;background:transparent;
+    color:inherit;font:inherit;font-weight:600;cursor:pointer;transition:.15s;}
+  .dq-bar button:hover{transform:translateY(-1px);box-shadow:0 4px 14px #0002;}
+  .dq-bar button.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;}
+  #dq-ov{position:fixed;inset:0;z-index:9999;overflow:auto;background:var(--bg);color:var(--fg);font-family:inherit;}
+  #dq-ov *{box-sizing:border-box;}
+  .dq-wrap{max-width:700px;margin:0 auto;padding:16px 16px 110px;animation:dqIn .25s ease;}
+  @keyframes dqIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .dq-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .dq-x{width:38px;height:38px;border-radius:50%;border:1px solid var(--bd);background:var(--card);color:var(--fg);cursor:pointer;font-size:1rem;}
+  .dq-prog{flex:1;height:10px;background:var(--bd);border-radius:99px;overflow:hidden;}
+  .dq-prog>div{height:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:99px;transition:width .3s;}
+  .dq-score{font-weight:700;font-size:.9rem;white-space:nowrap;}
+  .dq-card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:20px;box-shadow:0 6px 24px #0000000d;}
+  .dq-title{font-size:.85rem;color:var(--mut);margin-bottom:8px;}
+  .dq-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .dq-chip{font-size:.75rem;padding:3px 10px;border-radius:99px;background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac);font-weight:600;}
+  .dq-facts{background:color-mix(in srgb,var(--ac) 7%,transparent);border-left:4px solid var(--ac);padding:12px 14px;border-radius:0 12px 12px 0;
+    line-height:1.7;margin-bottom:16px;font-size:.95rem;}
+  .dq-q{font-size:1.1rem;font-weight:700;line-height:1.6;margin:0 0 14px;}
+  .dq-opt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;margin:10px 0;padding:14px;border-radius:14px;
+    border:2px solid var(--bd);background:var(--card);color:var(--fg);font:inherit;line-height:1.55;cursor:pointer;transition:.15s;}
+  .dq-opt:not(:disabled):hover{border-color:var(--ac);transform:translateY(-1px);}
+  .dq-opt:disabled{cursor:default;}
+  .dq-key{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;
+    background:var(--bd);color:var(--mut);}
+  .dq-opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent);}
+  .dq-opt.ok .dq-key{background:var(--ok);color:#fff;}
+  .dq-opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);}
+  .dq-opt.bad .dq-key{background:var(--bad);color:#fff;}
+  .dq-opt.dim{opacity:.55;}
+  .dq-fb{margin-top:16px;padding:14px 16px;border-radius:14px;line-height:1.7;animation:dqIn .25s ease;
+    background:color-mix(in srgb,var(--c) 10%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);}
+  .dq-fb b{color:var(--c);}
+  .dq-foot{position:fixed;left:0;right:0;bottom:0;padding:14px 16px;background:linear-gradient(transparent,var(--bg) 40%);}
+  .dq-next{display:block;width:100%;max-width:700px;margin:0 auto;padding:15px;border:none;border-radius:16px;font:inherit;font-weight:700;
+    font-size:1rem;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);cursor:pointer;box-shadow:0 8px 20px #6366f155;}
+  .dq-btn{padding:12px 18px;border-radius:14px;border:1px solid var(--bd);background:var(--card);color:var(--fg);font:inherit;font-weight:600;cursor:pointer;}
+  .dq-btn.p{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;}
+  .dq-btn.d{color:var(--bad);}
+  .dq-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .dq-big{text-align:center;padding:24px 0;}
+  .dq-ring{width:130px;height:130px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-size:2rem;font-weight:800;
+    background:conic-gradient(var(--ok) calc(var(--p)*1%),var(--bd) 0);position:relative;}
+  .dq-ring::before{content:"";position:absolute;inset:10px;background:var(--bg);border-radius:50%;}
+  .dq-ring span{position:relative;}
+  .dq-li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--bd);}
+  .dq-li small{color:var(--mut);}
+  .dq-pill{font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;}
+  .dq-pill.r{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);}
+  .dq-pill.w{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad);}
+  `;
+  document.head.appendChild(st);
+}
+
+function dqOverlay(html){
+  dqInjectCSS();
+  let ov = document.getElementById("dq-ov");
+  if (!ov) { ov = document.createElement("div"); ov.id = "dq-ov"; document.body.appendChild(ov); }
+  ov.dataset.theme = document.body.dataset.theme === "dark" ? "dark" : "light";
+  ov.innerHTML = html;
+}
+function dqClose(){ const ov = document.getElementById("dq-ov"); if (ov) ov.remove(); }
+
+/* แถบปุ่มบนหน้ารายการฎีกา */
+function addDekaPracticeBar(){
+  dqInjectCSS();
+  const old = document.getElementById("deka-practice-bar");
+  if (old) old.remove();
+  const title = document.getElementById("deka-list-title");
+  if (!title) return;
+  const bar = document.createElement("div");
+  bar.id = "deka-practice-bar";
+  bar.className = "dq-bar";
+  bar.innerHTML = `
+    <button class="primary" onclick="dqStart(false)">▶ เริ่มฝึกฝน</button>
+    <button onclick="dqStart(true)">🔁 ทวนที่เคยผิด</button>
+    <button onclick="dqStats()">📊 สถิติ</button>`;
+  title.insertAdjacentElement("afterend", bar);
+}
+
+function dqStart(onlyWrong){
+  const cat = DATA.categories[route.catKey];
+  let list = (cat.dekaList || []).filter(d => d.quiz && d.quiz.options && d.quiz.options.length);
+  const st = dqLoad();
+  if (onlyWrong) list = list.filter(d => (st[d.title] || {}).wrong > 0);
+  if (!list.length) { alert(onlyWrong ? "ยังไม่มีเรื่องที่เคยตอบผิด 🎉" : "ไม่มีข้อสอบฎีกาในหมวดนี้"); return; }
+  dqS = { list: dqShuffle(list), i: 0, right: 0, wrong: 0, wrongItems: [], picked: null, order: null };
+  dqPrepare();
+  dqRender();
+}
+
+function dqPrepare(){
+  const s = dqS;
+  if (s.i >= s.list.length) return;
+  s.order = dqShuffle(s.list[s.i].quiz.options.map((text, idx) => ({ text, idx })));
+  s.picked = null;
+}
+
+function dqRender(){
+  const s = dqS;
+  if (s.i >= s.list.length) return dqSummary();
+  const d = s.list[s.i], q = d.quiz, answered = s.picked !== null;
+  const LET = ["ก", "ข", "ค", "ง", "จ", "ฉ"];
+  const isRight = answered && s.order[s.picked].idx === q.correct;
+
+  const opts = s.order.map((o, k) => {
+    let cls = "";
+    if (answered) {
+      if (o.idx === q.correct) cls = "ok";
+      else if (k === s.picked) cls = "bad";
+      else cls = "dim";
+    }
+    return `<button class="dq-opt ${cls}" ${answered ? "disabled" : ""} onclick="dqAnswer(${k})">
+      <span class="dq-key">${LET[k] || k + 1}</span><span>${dqEsc(o.text)}</span></button>`;
+  }).join("");
+
+  const chips = (d.tags || []).map(t => `<span class="dq-chip">${dqEsc(t)}</span>`).join("");
+
+  dqOverlay(`<div class="dq-wrap">
+    <div class="dq-top">
+      <button class="dq-x" onclick="dqClose()">✕</button>
+      <div class="dq-prog"><div style="width:${(s.i / s.list.length) * 100}%"></div></div>
+      <div class="dq-score">${s.i + 1}/${s.list.length} · ✅${s.right} ❌${s.wrong}</div>
+    </div>
+    <div class="dq-card">
+      <div class="dq-title">${dqEsc(d.title)}${d.statute ? " · 📖 " + dqEsc(d.statute) : ""}</div>
+      ${chips ? `<div class="dq-chips">${chips}</div>` : ""}
+      ${d.facts ? `<div class="dq-facts">${dqEsc(d.facts)}</div>` : ""}
+      <p class="dq-q">${dqEsc(q.question)}</p>
+      ${opts}
+      ${answered ? `<div class="dq-fb" style="--c:var(${isRight ? "--ok" : "--bad"})">
+        <b>${isRight ? "✅ ถูกต้อง" : "❌ ยังไม่ถูก"}</b>
+        <div style="white-space:pre-wrap;margin-top:6px;">${dqEsc(q.explanation || d.principle || "")}</div></div>` : ""}
+    </div>
+  </div>
+  ${answered ? `<div class="dq-foot"><button class="dq-next" onclick="dqNext()">
+    ${s.i + 1 >= s.list.length ? "ดูสรุปผล 🏁" : "ข้อถัดไป ➡"}</button></div>` : ""}`);
+}
+
+function dqAnswer(k){
+  const s = dqS;
+  if (!s || s.picked !== null) return;
+  const d = s.list[s.i];
+  const ok = s.order[k].idx === d.quiz.correct;
+  s.picked = k;
+  const st = dqLoad();
+  const rec = st[d.title] || { right: 0, wrong: 0, last: null };
+  if (ok) { rec.right++; s.right++; } else { rec.wrong++; s.wrong++; s.wrongItems.push(d); }
+  rec.last = ok ? "right" : "wrong";
+  st[d.title] = rec;
+  dqSave(st);
+  dqRender();
+}
+
+function dqNext(){ dqS.i++; dqPrepare(); dqRender(); }
+
+function dqSummary(){
+  const s = dqS, total = s.right + s.wrong;
+  const pct = total ? Math.round((s.right / total) * 100) : 0;
+  dqOverlay(`<div class="dq-wrap">
+    <div class="dq-card">
+      <div class="dq-big">
+        <div class="dq-ring" style="--p:${pct}"><span>${pct}%</span></div>
+        <div style="font-size:1.1rem;">ถูก <b style="color:var(--ok)">${s.right}</b> · ผิด <b style="color:var(--bad)">${s.wrong}</b></div>
+      </div>
+      ${s.wrongItems.length
+        ? `<h3 style="margin:8px 0 0;">เรื่องที่ควรทบทวน</h3>` + s.wrongItems.map(d => `<div class="dq-li"><span>${dqEsc(d.title)}</span></div>`).join("")
+        : `<p style="text-align:center;">ตอบถูกทุกข้อ 🎉</p>`}
+      <div class="dq-row">
+        <button class="dq-btn p" onclick="dqStart(false)">▶ เล่นใหม่</button>
+        <button class="dq-btn" onclick="dqStart(true)">🔁 ทวนที่เคยผิด</button>
+        <button class="dq-btn" onclick="dqStats()">📊 สถิติรวม</button>
+        <button class="dq-btn" onclick="dqClose()">ปิด</button>
+      </div>
+    </div></div>`);
+}
+
+function dqStats(){
+  const st = dqLoad();
+  const rows = Object.entries(st).map(([title, r]) => ({ title, ...r })).sort((a, b) => b.wrong - a.wrong);
+  const R = rows.reduce((n, r) => n + r.right, 0), W = rows.reduce((n, r) => n + r.wrong, 0);
+  dqOverlay(`<div class="dq-wrap">
+    <div class="dq-top">
+      <button class="dq-x" onclick="dqClose()">✕</button>
+      <h2 style="margin:0;flex:1;">📊 สถิติฎีกาสำคัญ</h2>
+    </div>
+    <div class="dq-card">
+      <p style="margin-top:0;">รวม <b style="color:var(--ok)">✅ ${R}</b> · <b style="color:var(--bad)">❌ ${W}</b> ${R + W ? `· ${Math.round(R / (R + W) * 100)}%` : ""}</p>
+      ${rows.length ? rows.map(r => `<div class="dq-li">
+        <div><div>${dqEsc(r.title)}</div><small>ล่าสุด: ${r.last === "right" ? "ถูก" : r.last === "wrong" ? "ผิด" : "-"}</small></div>
+        <div style="display:flex;gap:6px;"><span class="dq-pill r">✅ ${r.right}</span><span class="dq-pill w">❌ ${r.wrong}</span></div>
+      </div>`).join("") : "<p>ยังไม่มีสถิติ กดเริ่มฝึกฝนได้เลย</p>"}
+      <div class="dq-row">
+        <button class="dq-btn p" onclick="dqStart(false)">▶ เริ่มฝึกฝน</button>
+        <button class="dq-btn d" onclick="dqReset()">🗑 ล้างสถิติหมวดนี้</button>
+        <button class="dq-btn" onclick="dqExport()">⬇ Export</button>
+<button class="dq-btn" onclick="dqImport()">⬆ Import</button>
+      </div>
+    </div></div>`);
+}
+function dqReset(){ if (confirm("ล้างสถิติของหมวดนี้ทั้งหมด?")) { dqSave({}); dqStats(); } }
+
+/* คีย์ลัด: กด 1-4 เลือกข้อ, Enter/Space ไปข้อถัดไป */
+document.addEventListener("keydown", e => {
+  if (!document.getElementById("dq-ov") || !dqS || dqS.i >= dqS.list.length) return;
+  if (dqS.picked === null && /^[1-6]$/.test(e.key) && dqS.order[+e.key - 1]) dqAnswer(+e.key - 1);
+  else if (dqS.picked !== null && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); dqNext(); }
+});
 /* ============================================================
    RENDER DISPATCH
    ============================================================ */
@@ -513,16 +836,28 @@ function render() {
     document.getElementById("deka-list-title").innerText = `ฎีกาสำคัญ — ${cat.label}`;
     buildDekaSearchUI(cat);
     buildDekaItems(cat);
+    addDekaPracticeBar();
   }
   else if (route.screen === "screen-deka-view" && cat) viewDekaRender(cat);
   else if (route.screen === "screen-writing-list" && cat) buildWritingItems(cat);
   else if (route.screen === "screen-writing-view" && cat) openWritingRender(cat);
 }
 
+function applyPrefs(){
+  try {
+    const t = localStorage.getItem("slb_theme"); if (t) document.body.dataset.theme = t;
+    const f = parseFloat(localStorage.getItem("slb_font")); if (f) { currentFontSize = f; document.getElementById("app").style.fontSize = f + "rem"; }
+  } catch(e){}
+}
 function toggleTheme() {
   document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
+  try { localStorage.setItem("slb_theme", document.body.dataset.theme); } catch(e){}
 }
 function changeFontSize(delta) {
+  currentFontSize = Math.min(1.6, Math.max(0.8, currentFontSize + delta));
+  document.getElementById("app").style.fontSize = currentFontSize + "rem";
+  try { localStorage.setItem("slb_font", currentFontSize); } catch(e){}
+
   currentFontSize = Math.min(1.6, Math.max(0.8, currentFontSize + delta));
   document.getElementById("app").style.fontSize = currentFontSize + "rem";
 }
@@ -629,11 +964,49 @@ function openGroupMindmap(gKey) {
 function closeMindmapModal() {
   document.getElementById("mindmap-modal").classList.remove("active");
 }
-
+function dqProgress(key, cat){
+  let st = {}; try { st = JSON.parse(localStorage.getItem("dekaStats_" + key) || "{}"); } catch(e){}
+  const rows = Object.values(st);
+  const total = (cat.dekaList || []).length;
+  const R = rows.reduce((n, r) => n + r.right, 0), W = rows.reduce((n, r) => n + r.wrong, 0);
+  return { total, done: rows.length, pct: R + W ? Math.round(R / (R + W) * 100) : null };
+}
+function dqExport(){
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k.startsWith("dekaStats_")) { try { out[k] = JSON.parse(localStorage.getItem(k)); } catch(e){} }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
+  a.download = "deka-stats-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function dqImport(){
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/json";
+  inp.onchange = async () => {
+    try {
+      const data = JSON.parse(await inp.files[0].text());
+      Object.entries(data).forEach(([k, v]) => {
+        if (!k.startsWith("dekaStats_")) return;
+        const cur = JSON.parse(localStorage.getItem(k) || "{}");
+        Object.entries(v).forEach(([t, r]) => {
+          const c = cur[t];
+          cur[t] = c ? { right: Math.max(c.right, r.right), wrong: Math.max(c.wrong, r.wrong), last: r.last } : r;
+        });
+        localStorage.setItem(k, JSON.stringify(cur));
+      });
+      alert("นำเข้าสำเร็จ"); dqStats();
+    } catch(e) { alert("ไฟล์ไม่ถูกต้อง"); }
+  };
+  inp.click();
+}
 /* ============================================================
    หน้าเมนูหลักของวิชา (4 การ์ด)
    ============================================================ */
-function buildHomeContent(cat) {
+   
+function buildHomeContent(cat) { 
+  const pg = dqProgress(route.catKey, cat);
   document.getElementById("home-content").innerHTML = `
     <h2 style="margin-top:0;">${escHTML(cat.label)}</h2>
     <div class="menu-grid">
@@ -645,13 +1018,16 @@ function buildHomeContent(cat) {
       <button class="main-btn" onclick="openDekaList()">
         <div class="icon-box">📋</div>
         <div><h3 style="margin:0;">ฎีกาสำคัญ</h3>
-             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.dekaList||[]).length} เรื่อง</p></div>
+            <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${pg.total} เรื่อง${pg.done ? ` · ฝึกแล้ว ${pg.done}` : ""}${pg.pct !== null ? ` · ถูก ${pg.pct}%` : ""}</p>
+<div class="mini-bar"><i style="width:${pg.total ? pg.done / pg.total * 100 : 0}%"></i></div></div>
       </button>
+      ${(cat.writingProblems && cat.writingProblems.length > 0) ? `
       <button class="main-btn" onclick="openWritingList2()">
         <div class="icon-box">✍️</div>
         <div><h3 style="margin:0;">ฝึกวินิจฉัย (IRAC)</h3>
              <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.writingProblems||[]).length} โจทย์</p></div>
       </button>
+      ` : ""}
       <button class="main-btn" onclick="openSubjectOverview()">
         <div class="icon-box">🗺️</div>
         <div><h3 style="margin:0;">ภาพรวมวิชา / องค์ประกอบ</h3>
@@ -1215,8 +1591,10 @@ function viewDekaRender(cat) {
     <div class="deka-card">
       <h2 style="margin-top:0;font-size:1.1rem;">${escHTML(d.title)}</h2>
       <div>${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${escHTML(t)}</span>`).join(" ")}</div>
+     ${d.statute && d.statute.trim() !== "" && d.statute.trim() !== "(" ? `
       <div class="deka-section-label">📜 ตัวบทย่อ</div>
       <div class="deka-principle-box">${nl(d.statute)}</div>
+      ` : ""}
       <div class="deka-section-label">📁 ข้อเท็จจริง</div>
       <p class="deka-body-text">${nl(d.facts)}</p>
       <div class="deka-section-label">⚖️ หลักที่ศาลวินิจฉัย</div>
