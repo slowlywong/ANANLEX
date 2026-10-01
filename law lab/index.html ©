@@ -4,18 +4,159 @@
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VMDBK9NJV9"></script>
 <script>
+ function nodeIcon() {
+  return `<span class="dot-ico"></span>`;
+}
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
   gtag('config', 'G-VMDBK9NJV9');
+  function sizeGraphCanvas() {
+  if (!G.cv || !G.wrap) return false;
+  const w = G.wrap.clientWidth, h = G.wrap.clientHeight;
+  if (!w || !h) return false;
+  const dpr = window.devicePixelRatio || 1;
+  if (w === G.w && h === G.h && dpr === G.dpr) return false;
+  G.w = w; G.h = h; G.dpr = dpr;
+  G.cv.width = Math.round(w * dpr);
+  G.cv.height = Math.round(h * dpr);
+  G.cv.style.width = w + "px";
+  G.cv.style.height = h + "px";
+  return true;
+}
+
+let _gResizeT = null;
+function onGraphResize() {
+  if (route.screen !== "screen-graph" || !G.cv) return;
+  clearTimeout(_gResizeT);
+  // หน่วงเล็กน้อย เพราะ iOS รายงานขนาดจอหลังหมุนช้ากว่า event
+  _gResizeT = setTimeout(() => {
+    if (!sizeGraphCanvas()) return;
+    // คงจุดศูนย์กลางเดิมไว้ ไม่ให้กราฟกระโดด
+    if (G.tf) {
+      d3.select(G.cv).call(G.zoom.transform,
+        d3.zoomIdentity.translate(G.w / 2, G.h / 2).scale(G.tf.k));
+    }
+    drawGraph();
+  }, 200);
+}
+window.addEventListener("resize", onGraphResize);
+window.addEventListener("orientationchange", onGraphResize);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", onGraphResize);
+let navDepth = 0;   // นับจำนวนหน้าที่เดินหน้ามาแล้วในเซสชันนี้
+
+function goBack(fallback) {
+  if (navDepth > 0) {
+    history.back();
+  } else if (typeof fallback === "function") {
+    fallback();   // เข้าหน้านี้ตรง ๆ (รีเฟรช/ลิงก์) ไม่มีประวัติ ให้ไปหน้า fallback
+  } else {
+    go({ screen: "screen-category" });
+  }
+}
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LawLex </title>
+    <title>ANANLEX </title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
+      .dot-ico{
+  display:block;width:16px;height:16px;border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 0 5px color-mix(in srgb,currentColor 20%,transparent);
+  transition:transform .2s;
+}
+.main-btn:active .dot-ico{box-shadow:0 0 0 5px rgba(255,255,255,.35);}
+      .brand-logo{background:none!important;box-shadow:none!important;border-radius:0;width:48px;height:48px;}
+.brand-logo svg{filter:drop-shadow(0 3px 8px rgba(245,158,11,.4));}
+      /* ===== NODE ICON + PRESS COLOR ===== */
+.main-btn{--nc:var(--primary);}
+.icon-box.node-ico{
+  color:var(--nc);border-radius:50%;
+  background:color-mix(in srgb,var(--nc) 12%,var(--card-bg));
+  border:1px solid color-mix(in srgb,var(--nc) 35%,transparent);
+  transition:background .2s,color .2s,box-shadow .2s,transform .2s;
+}
+.node-ico svg{display:block;}
+@media (hover:hover){
+  .main-btn:hover{
+    border-color:var(--nc);
+    background:color-mix(in srgb,var(--nc) 9%,var(--card-bg));
+  }
+  .main-btn:hover .node-ico{box-shadow:0 0 0 5px color-mix(in srgb,var(--nc) 18%,transparent);}
+}
+/* กดแล้วเปลี่ยนสี (ทั้งเมาส์และจอสัมผัส) */
+.main-btn:active{
+  background:color-mix(in srgb,var(--nc) 24%,var(--card-bg));
+  border-color:var(--nc);transform:scale(.97);
+}
+.main-btn:active .node-ico{background:var(--nc);color:#fff;transform:scale(1.08);}
+
+/* จุดนำหน้าหัวข้อกลุ่ม */
+.g-dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:10px;
+  background:var(--primary);vertical-align:middle;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 20%,transparent);}
+
+/* โลโก้ */
+.brand-logo svg{display:block;}
+
+/* ===== GRAPH CTA ===== */
+.graph-cta{
+  position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;
+  width:100%;margin-bottom:20px;padding:18px 20px;cursor:pointer;text-align:left;
+  font-family:inherit;color:#fff;border-radius:20px;
+  border:1px solid rgba(129,140,248,.35);
+  background:radial-gradient(120% 140% at 0% 0%,#312e81 0%,#0f172a 62%);
+  box-shadow:0 10px 30px rgba(79,70,229,.28),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .2s,box-shadow .2s,filter .2s,border-color .2s;
+}
+@media (hover:hover){
+  .graph-cta:hover{transform:translateY(-2px);border-color:#a5b4fc;
+    box-shadow:0 14px 38px rgba(99,102,241,.45),inset 0 1px 0 rgba(255,255,255,.12);}
+  .graph-cta:hover .gc-go{transform:translateX(4px);}
+  .graph-cta:hover .gc-net{opacity:.9;}
+}
+.graph-cta:active{transform:scale(.98);filter:brightness(1.25);}
+.gc-net{position:absolute;right:0;top:0;height:100%;width:62%;opacity:.55;pointer-events:none;transition:opacity .25s;}
+.gc-net line{stroke:#818cf8;stroke-width:1;opacity:.65;}
+.gc-net circle{fill:#a5b4fc;}
+.gc-net .hot{fill:#fbbf24;transform-box:fill-box;transform-origin:center;animation:gcPulse 2.4s ease-in-out infinite;}
+@keyframes gcPulse{50%{transform:scale(1.7);opacity:.55;}}
+.gc-orb{position:relative;z-index:1;flex:none;width:50px;height:50px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 0 0 6px rgba(129,140,248,.14);}
+.gc-text{position:relative;z-index:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+.gc-text b{font-family:'Inter','Sarabun',sans-serif;font-size:1.12rem;letter-spacing:-.01em;}
+.gc-text small{color:#c7d2fe;font-size:.8rem;line-height:1.4;}
+.gc-text em{font-style:normal;font-size:.72rem;font-weight:700;color:#fbbf24;margin-top:3px;letter-spacing:.03em;}
+.gc-go{position:relative;z-index:1;margin-left:auto;flex:none;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;background:rgba(255,255,255,.12);transition:transform .2s;}
+@media (max-width:520px){ .gc-net{width:45%;opacity:.35;} .gc-text small{font-size:.74rem;} }
+      /* ===== กราฟ: รองรับหมุนจอ ===== */
+#graph-wrap{
+  position:relative;width:100%;max-width:100%;
+  height:70vh;                /* fallback */
+  height:70dvh;               /* ไม่นับแถบเบราว์เซอร์ของมือถือ */
+  min-height:260px;overflow:hidden;
+}
+#graph-canvas{max-width:100%;}
+#screen-graph .content-block{overflow:hidden;box-sizing:border-box;}
+
+/* มือถือ/แท็บเล็ตแนวนอน: จอเตี้ย ให้กราฟเต็มความสูง */
+@media (orientation:landscape) and (max-height:600px){
+  body{padding:0 8px 24px;}
+  #screen-graph .header-gap{display:none;}
+  #graph-wrap{height:calc(100dvh - 140px);min-height:200px;}
+  .graph-bar{font-size:.78rem;gap:6px;}
+  #screen-graph h2{display:none;}
+}
+
+/* จอแคบ: แถบควบคุมไม่ล้น */
+@media (max-width:520px){
+  .graph-bar .search-box{flex-basis:100%;}
+}
       /* ===== BRAND ===== */
 .brand{display:flex;align-items:center;gap:12px;}
 .brand-logo{
@@ -339,6 +480,7 @@ button{-webkit-tap-highlight-color:transparent;}
 #graph-canvas{display:block;border-radius:14px;background:var(--bg);touch-action:none;cursor:grab;}
 .g-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--text-sub);margin-top:10px;}
 .g-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;}
+
     </style>
 </head>
 <body data-theme="light">
@@ -351,11 +493,37 @@ button{-webkit-tap-highlight-color:transparent;}
 <div class="container" id="app" style="display:none;">
 
  <div class="header">
-    <div class="brand">
-        <div class="brand-logo">⚖️</div>
+    <div class="brand" style="cursor:pointer;" onclick="goCategoryGroups()" title="กลับหน้าแรก">
+        <div class="brand-logo">
+            <svg viewBox="0 0 64 64" width="46" height="46" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <defs>
+                    <linearGradient id="lexG" x1="0" y1="0" x2="1" y2="1">
+                     <stop offset="0" stop-color="#fcd34d"/>
+                     <stop offset=".55" stop-color="#f59e0b"/>
+                     <stop offset="1" stop-color="#b45309"/>
+                  </linearGradient>
+                </defs>
+                <g stroke="url(#lexG)">
+                    <!-- คานตราชู -->
+                    <path d="M10 18.5 C20 12 44 12 54 18.5" stroke-width="3"/>
+                    <!-- เชือกแขวนจาน -->
+                    <path d="M10 18.5 L3 38 M10 18.5 L17 38 M54 18.5 L47 38 M54 18.5 L61 38" stroke-width="1.3"/>
+                    <!-- จานชั่ง -->
+                    <path d="M2 38 Q10 48 18 38 Z M46 38 Q54 48 62 38 Z" fill="url(#lexG)" stroke-width="1.5"/>
+                    <!-- เลข 8 (Ananke) -->
+                    <path d="M32 31 C22 22 22 12 32 12 C42 12 42 22 32 31 C22 40 20 54 32 54 C44 54 42 40 32 31 Z" stroke-width="4.6"/>
+                    <!-- ฐาน -->
+                    <path d="M18 60 H46" stroke-width="3"/>
+                </g>
+                <!-- หยดยอด -->
+                <path d="M32 2.5 C34 5 35 6 35 7.5 A3 3 0 0 1 29 7.5 C29 6 30 5 32 2.5 Z" fill="url(#lexG)" stroke="none"/>
+                <!-- โล่ (Lex) ตรงจุดไขว้ -->
+                <path d="M32 26.5 L37 28.3 V32 C37 35 34.8 36.8 32 38 C29.2 36.8 27 35 27 32 V28.3 Z" fill="#fff" stroke="url(#lexG)" stroke-width="1.6"/>
+            </svg>
+        </div>
         <div class="brand-text">
-            <h1>LawLex</h1>
-            <span class="brand-credit">by slowly_m</span>
+            <h1>ANANLEX</h1>
+            <span class="brand-credit">Legal Knowledge System</span>
         </div>
     </div>
     <div class="header-actions">
@@ -363,21 +531,45 @@ button{-webkit-tap-highlight-color:transparent;}
     </div>
 </div>
     <!-- SCREEN: เลือกหมวด (Grouped by ประมวลกฎหมาย) -->
-    <section id="screen-category" class="screen active">
-    <button class="btn btn-primary" style="width:100%;margin-bottom:16px;" onclick="openGraph()">🕸️ กราฟองค์ความรู้ทั้งหมด</button>
+   <section id="screen-category" class="screen active">
+    <button class="graph-cta" onclick="openGraph()">
+        <svg class="gc-net" viewBox="0 0 240 100" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+            <line x1="30" y1="30" x2="85" y2="68"/><line x1="85" y1="68" x2="140" y2="22"/>
+            <line x1="140" y1="22" x2="195" y2="58"/><line x1="85" y1="68" x2="120" y2="90"/>
+            <line x1="140" y1="22" x2="110" y2="48"/><line x1="195" y1="58" x2="225" y2="20"/>
+            <line x1="110" y1="48" x2="85" y2="68"/>
+            <circle cx="30" cy="30" r="3"/><circle cx="85" cy="68" r="4.5" class="hot"/>
+            <circle cx="140" cy="22" r="3.5"/><circle cx="195" cy="58" r="3"/>
+            <circle cx="120" cy="90" r="2.5"/><circle cx="110" cy="48" r="3.5" class="hot"/>
+            <circle cx="225" cy="20" r="2.5"/>
+        </svg>
+        <span class="gc-orb">
+            <svg viewBox="0 0 48 48" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <line x1="24" y1="24" x2="38" y2="12"/><line x1="24" y1="24" x2="10" y2="30"/><line x1="24" y1="24" x2="32" y2="40"/>
+                <circle cx="24" cy="24" r="7" fill="currentColor"/>
+                <circle cx="38" cy="12" r="3.5"/><circle cx="10" cy="30" r="3.5"/><circle cx="32" cy="40" r="3.5"/>
+            </svg>
+        </span>
+        <span class="gc-text">
+            <b>Lexnection Graph</b>
+            <small>แผนที่ความเชื่อมโยงมาตราและฎีกาข้ามวิชา</small>
+            <em id="graph-cta-stat"></em>
+        </span>
+        <span class="gc-go">→</span>
+    </button>
     <h2>เลือกหมวดวิชากฎหมาย</h2>
     <div id="category-grid"></div>
 </section>
 
     <!-- SCREEN: เมนูหลักวิชา (4 การ์ด) -->
     <section id="screen-home" class="screen">
-        <button class="back-nav" onclick="goCategoryGroups()">← เปลี่ยนหมวดวิชา</button>
+        <button class="back-nav" onclick="goBack(goCategoryGroups)">← เปลี่ยนหมวดวิชา</button>
         <div id="home-content"></div>
     </section>
     <!-- SCREEN: กราฟองค์ความรู้ -->
 <section id="screen-graph" class="screen">
-    <button class="back-nav" onclick="goCategoryGroups()">← กลับ</button>
-    <h2 style="font-size:1.2rem;margin-top:0;">🕸️ กราฟองค์ความรู้</h2>
+    <button class="back-nav" onclick="goBack(goCategoryGroups)">← กลับ</button>
+    <h2 style="font-size:1.2rem;margin-top:0;">Lexnection Graph</h2>
     <div class="content-block" style="padding:14px;">
         <div class="graph-bar">
             <input id="graph-search" class="search-box" placeholder="พิมพ์เลขมาตรา เช่น 420 แล้วกด Enter" onkeydown="if(event.key==='Enter')graphSearch(this.value)">
@@ -393,7 +585,7 @@ button{-webkit-tap-highlight-color:transparent;}
 
     <!-- SCREEN: ภาพรวมวิชา / องค์ประกอบ (Tree + Deep Link) -->
     <section id="screen-overview" class="screen">
-        <button class="back-nav" onclick="goSubjectHome()">← กลับเมนูหลัก</button>
+        <button class="back-nav" onclick="goBack(goSubjectHome)">← กลับเมนูหลัก</button>
         <h2 id="overview-title" style="font-size:1.2rem;"></h2>
         <p style="color:var(--text-sub);font-size:0.85rem;margin-top:-8px;">แตะหัวข้อ "ลักษณะ" เพื่อขยายดูหมวด/ส่วน/มาตรา แล้วแตะเลขมาตราเพื่อกระโดดไปยัง Flash Card ทันที</p>
         <div class="content-block" id="overview-body"></div>
@@ -401,7 +593,7 @@ button{-webkit-tap-highlight-color:transparent;}
 
     <!-- SCREEN: Flash Card -->
     <section id="screen-flash" class="screen">
-        <button class="back-nav" onclick="goSubjectHome()">← กลับเมนูหลัก</button>
+        <button class="back-nav" onclick="goBack(goSubjectHome)">← กลับเมนูหลัก</button>
 
         <div class="content-block" style="margin-bottom:16px;">
             <div class="tab-row">
@@ -439,7 +631,7 @@ button{-webkit-tap-highlight-color:transparent;}
 
     <!-- SCREEN: รายการ Deka -->
     <section id="screen-deka-list" class="screen">
-        <button class="back-nav" onclick="goSubjectHome()">← กลับ</button>
+        <button class="back-nav" onclick="goBack(goSubjectHome)">← กลับ</button>
         <h2 id="deka-list-title" style="font-size:1.2rem;"></h2>
 
         <div class="content-block" style="margin-bottom:16px;">
@@ -462,21 +654,21 @@ button{-webkit-tap-highlight-color:transparent;}
 
     <!-- SCREEN: ดู Deka รายชิ้น -->
     <section id="screen-deka-view" class="screen">
-        <button class="back-nav" onclick="goDekaList()">← กลับรายการ</button>
+        <button class="back-nav" onclick="goBack(goDekaList)">← กลับรายการ</button>
         <div id="deka-content"></div>
         <button class="fab" onclick="goToRelatedCode()">Code</button>
     </section>
 
     <!-- SCREEN: รายการ Writing -->
     <section id="screen-writing-list" class="screen">
-        <button class="back-nav" onclick="goSubjectHome()">← กลับ</button>
+        <button class="back-nav" onclick="goBack(goSubjectHome)">← กลับ</button>
         <h2 id="writing-list-title" style="font-size:1.2rem;"></h2>
         <div id="writing-items"></div>
     </section>
 
     <!-- SCREEN: ฝึกเขียน Writing -->
     <section id="screen-writing-view" class="screen">
-        <button class="back-nav" onclick="goWritingList()">← กลับรายการ</button>
+        <button class="back-nav" onclick="goBack(goWritingList)">← กลับรายการ</button>
         <div id="writing-content"></div>
     </section>
 
@@ -664,12 +856,10 @@ function initGraph() {
     info.innerHTML = `<p class="search-empty">โหลดกราฟไม่สำเร็จ (GRAPH หรือ d3 ไม่พร้อม) ดู Console</p>`;
     return;
   }
-  const wrap = document.getElementById("graph-wrap"), cv = document.getElementById("graph-canvas");
-  G.cv = cv; G.dpr = window.devicePixelRatio || 1;
-  G.w = wrap.clientWidth; G.h = wrap.clientHeight;
-  cv.width = G.w * G.dpr; cv.height = G.h * G.dpr;
-  cv.style.width = G.w + "px"; cv.style.height = G.h + "px";
+    const wrap = document.getElementById("graph-wrap"), cv = document.getElementById("graph-canvas");
+  G.cv = cv; G.wrap = wrap;
   G.ctx = cv.getContext("2d");
+  sizeGraphCanvas();
   if (!G.bound) { bindGraphEvents(); G.bound = true; }
   G.tf = d3.zoomIdentity.translate(G.w / 2, G.h / 2);
   d3.select(cv).call(G.zoom.transform, G.tf);
@@ -944,12 +1134,17 @@ function go(partial, opts) {
   opts = opts || {};
   route = { ...route, ...partial };
   persistRoute();
-  if (opts.replace) window.history.replaceState(route, "");
-  else window.history.pushState(route, "");
+  if (opts.replace) {
+    window.history.replaceState(route, "");
+  } else {
+    window.history.pushState(route, "");
+    navDepth++;
+  }
   render();
 }
 
 window.addEventListener("popstate", function (e) {
+  if (navDepth > 0) navDepth--;
   route = e.state ? { ...DEFAULT_ROUTE, ...e.state } : loadRouteFromStorage();
   persistRoute();
   render();
@@ -1321,24 +1516,28 @@ function groupCategories() {
 
 function buildCategoryMenu() {
   const groups = groupCategories();
+  const allKeys = Object.keys(DATA.categories);
   document.getElementById("category-grid").innerHTML = Object.values(groups).map(g => `
     <div class="group-block content-block">
       <div class="group-header">
-        <h3>${g.icon} ${escHTML(g.label)}</h3>
-        <button class="btn-mindmap" onclick="openGroupMindmap('${escJS(g.key)}')">🗺️ ภาพรวมประมวล</button>
+        <h3><span class="g-dot"></span>${escHTML(g.label)}</h3>
+        <button class="btn-mindmap" onclick="openGroupMindmap('${escJS(g.key)}')">ภาพรวมประมวล</button>
       </div>
       <div class="menu-grid">
         ${g.catKeys.map(key => {
           const cat = DATA.categories[key];
           return `
-            <button class="main-btn" onclick="selectCategory('${escJS(key)}')">
-              <div class="icon-box">${cat.icon || "📚"}</div>
+            <button class="main-btn" style="--nc:${catColor(key)}" onclick="selectCategory('${escJS(key)}')">
+              <div class="icon-box node-ico">${nodeIcon(allKeys.indexOf(key))}</div>
               <div><h3 style="margin:0;">${escHTML(cat.label)}</h3>
                    <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.flashCards||[]).length} มาตรา</p></div>
             </button>`;
         }).join("")}
       </div>
     </div>`).join("");
+
+  const st = document.getElementById("graph-cta-stat");
+  if (st && GRAPH) st.textContent = `${GRAPH.nodes.length} โหนด · ${GRAPH.links.length} เส้นเชื่อม`;
 }
 
 function renderMindmapTree(nodes) {
@@ -1361,7 +1560,7 @@ function openGroupMindmap(gKey) {
       return { label: cat.label, children: subCats.map(c => ({ label: c })) };
     });
   }
-  document.getElementById("mindmap-modal-title").innerText = `${g.icon} ภาพรวม ${g.label}`;
+  document.getElementById("mindmap-modal-title").innerText = `ภาพรวม ${g.label}`;
   document.getElementById("mindmap-modal-body").innerHTML = renderMindmapTree(nodes);
   document.getElementById("mindmap-modal").classList.add("active");
 }
@@ -1414,26 +1613,26 @@ function buildHomeContent(cat) {
   document.getElementById("home-content").innerHTML = `
     <h2 style="margin-top:0;">${escHTML(cat.label)}</h2>
     <div class="menu-grid">
-      <button class="main-btn" onclick="startFlash()">
-        <div class="icon-box">🗂️</div>
+      <button class="main-btn" style="--nc:#6366f1" onclick="startFlash()">
+        <div class="icon-box node-ico">${nodeIcon(0)}</div>
         <div><h3 style="margin:0;">Flash Cards</h3>
              <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.flashCards||[]).length} การ์ด</p></div>
       </button>
-      <button class="main-btn" onclick="openDekaList()">
-        <div class="icon-box">📋</div>
+      <button class="main-btn" style="--nc:#f59e0b" onclick="openDekaList()">
+        <div class="icon-box node-ico">${nodeIcon(1)}</div>
         <div><h3 style="margin:0;">ฎีกาสำคัญ</h3>
             <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${pg.total} เรื่อง${pg.done ? ` · ฝึกแล้ว ${pg.done}` : ""}${pg.pct !== null ? ` · ถูก ${pg.pct}%` : ""}</p>
 <div class="mini-bar"><i style="width:${pg.total ? pg.done / pg.total * 100 : 0}%"></i></div></div>
       </button>
       ${(cat.writingProblems && cat.writingProblems.length > 0) ? `
-      <button class="main-btn" onclick="openWritingList2()">
-        <div class="icon-box">✍️</div>
+      <button class="main-btn" style="--nc:#22c55e" onclick="openWritingList2()">
+       <div class="icon-box node-ico">${nodeIcon(2)}</div>
         <div><h3 style="margin:0;">ฝึกวินิจฉัย (IRAC)</h3>
              <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">${(cat.writingProblems||[]).length} โจทย์</p></div>
       </button>
       ` : ""}
-      <button class="main-btn" onclick="openSubjectOverview()">
-        <div class="icon-box">🗺️</div>
+      <button class="main-btn" style="--nc:#06b6d4" onclick="openSubjectOverview()">
+        <div class="icon-box node-ico">${nodeIcon(3)}</div>
         <div><h3 style="margin:0;">ภาพรวมวิชา / องค์ประกอบ</h3>
              <p style="margin:0;font-size:0.8rem;color:var(--text-sub);">Tree View</p></div>
       </button>
