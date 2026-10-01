@@ -13,6 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LawLex </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
       /* ===== BRAND ===== */
@@ -332,6 +333,12 @@ button{-webkit-tap-highlight-color:transparent;}
             font-size:0.8rem; cursor:pointer; font-family:inherit;
         }
         .ov-section-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+        .graph-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;font-size:.85rem;}
+.graph-bar .search-box{flex:1;min-width:140px;}
+.graph-bar label{display:flex;align-items:center;gap:4px;cursor:pointer;}
+#graph-canvas{display:block;border-radius:14px;background:var(--bg);touch-action:none;cursor:grab;}
+.g-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--text-sub);margin-top:10px;}
+.g-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;}
     </style>
 </head>
 <body data-theme="light">
@@ -357,15 +364,32 @@ button{-webkit-tap-highlight-color:transparent;}
 </div>
     <!-- SCREEN: เลือกหมวด (Grouped by ประมวลกฎหมาย) -->
     <section id="screen-category" class="screen active">
-        <h2>เลือกหมวดวิชากฎหมาย</h2>
-        <div id="category-grid"></div>
-    </section>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:16px;" onclick="openGraph()">🕸️ กราฟองค์ความรู้ทั้งหมด</button>
+    <h2>เลือกหมวดวิชากฎหมาย</h2>
+    <div id="category-grid"></div>
+</section>
 
     <!-- SCREEN: เมนูหลักวิชา (4 การ์ด) -->
     <section id="screen-home" class="screen">
         <button class="back-nav" onclick="goCategoryGroups()">← เปลี่ยนหมวดวิชา</button>
         <div id="home-content"></div>
     </section>
+    <!-- SCREEN: กราฟองค์ความรู้ -->
+<section id="screen-graph" class="screen">
+    <button class="back-nav" onclick="goCategoryGroups()">← กลับ</button>
+    <h2 style="font-size:1.2rem;margin-top:0;">🕸️ กราฟองค์ความรู้</h2>
+    <div class="content-block" style="padding:14px;">
+        <div class="graph-bar">
+            <input id="graph-search" class="search-box" placeholder="พิมพ์เลขมาตรา เช่น 420 แล้วกด Enter" onkeydown="if(event.key==='Enter')graphSearch(this.value)">
+            <label><input type="checkbox" id="g-deka" checked onchange="graphRefilter()"> ฎีกา</label>
+            <label><input type="checkbox" id="g-co" checked onchange="graphRefilter()"> มาตราคู่กัน</label>
+            <label><input type="checkbox" id="g-tag" onchange="graphRefilter()"> แท็ก</label>
+            <label><input type="checkbox" id="g-iso" onchange="graphRefilter()"> มาตราไร้ลิงก์</label>
+        </div>
+        <div id="graph-wrap" style="height:70vh;"><canvas id="graph-canvas"></canvas></div>
+        <div id="graph-info"></div>
+    </div>
+</section>
 
     <!-- SCREEN: ภาพรวมวิชา / องค์ประกอบ (Tree + Deep Link) -->
     <section id="screen-overview" class="screen">
@@ -506,7 +530,381 @@ const QCE_CONFIG = {
 /* ============================================================
    DATA (โหลดจาก data.json ที่ผู้ใช้มีอยู่แล้ว)
    ============================================================ */
-let DATA = {};
+let DATA = {};let GRAPH = null;
+
+/* ===== GRAPH: Parsing helpers ===== */
+const THAI_DIGITS = '๐๑๒๓๔๕๖๗๘๙';
+const toArabic = s => s.replace(/[๐-๙]/g, d => THAI_DIGITS.indexOf(d));
+
+// ดึงเลขมาตราจากข้อความ รองรับ 224/1, 277 ทวิ, 340 ตรี, "ม.204 วรรคสอง"
+function extractSections(text) {
+  if (!text) return [];
+  const t = toArabic(String(text));
+  const out = new Set();
+  const re = /(?:มาตรา|ม\.)\s*(\d+(?:\/\d+)?(?:\s*(?:ทวิ|ตรี|จัตวา))?)/g;
+  let m;
+  while ((m = re.exec(t))) out.add(m[1].replace(/\s+/g, ' ').trim());
+  const list = /(?:มาตรา|ม\.)\s*((?:\d+(?:\/\d+)?\s*(?:,|และ)\s*)+\d+(?:\/\d+)?)/g;
+  while ((m = list.exec(t))) m[1].split(/,|และ/).forEach(x => out.add(x.trim()));
+  return [...out];
+}
+
+// แยกประมวลกฎหมาย กัน ม.94 ป.วิ.พ. ชนกับ ม.94 ป.พ.พ.
+function detectCode(statuteText, catKey) {
+  const s = statuteText || '';
+  if (/ป\.?\s?วิ\.?\s?พ|วิธีพิจารณาความแพ่ง/.test(s)) return 'CPC';
+  if (/ป\.?\s?วิ\.?\s?อ|วิธีพิจารณาความอาญา/.test(s)) return 'CRPC';
+  if (/ป\.?\s?อ\.|กฎหมายอาญา/.test(s)) return 'CRIM';
+  if (/ป\.?\s?พ\.?\s?พ|แพ่งและพาณิชย์/.test(s)) return 'CCC';
+  return catKey === 'criminal_offenses' ? 'CRIM' : 'CCC';
+}
+
+const isSectionTag = t => /^(?:ม\.|มาตรา)\s*\d/.test(toArabic(t));
+const shortDeka = t => t.replace(/\s*[—–-].*$/, '').replace(/^คำพิพากษาศาลฎีกาที่/, 'ฎีกา').trim();
+
+/* ===== GRAPH: Main ===== */
+function buildGraph(data) {
+  const nodes = [], links = [], idx = new Map();
+  const linkSet = new Set();
+
+  const add = (id, type, label, ref = {}) => {
+    if (!idx.has(id)) {
+      const n = { id, type, label, ref, deg: 0 };
+      idx.set(id, n); nodes.push(n);
+    }
+    return idx.get(id);
+  };
+  const link = (a, b, kind) => {
+    if (!a || !b || a.id === b.id) return;
+    const key = a.id < b.id ? `${a.id}|${b.id}|${kind}` : `${b.id}|${a.id}|${kind}`;
+    if (linkSet.has(key)) return;
+    linkSet.add(key);
+    a.deg++; b.deg++;
+    links.push({ source: a.id, target: b.id, kind });
+  };
+  const sectionNode = (code, sec) => idx.get(`s:${code}:${sec}`);
+
+  // 1) มาตรา
+  for (const [catKey, cat] of Object.entries(data.categories)) {
+    (cat.flashCards || []).forEach((c, i) => {
+      const code = catKey === 'criminal_offenses' ? 'CRIM' : 'CCC';
+      const sec = toArabic(String(c.section)).trim();
+      const n = add(`s:${code}:${sec}`, 'section', `ม.${sec}`, { catKey, cardIdx: i });
+      n.title = c.title;
+      n.group = c.chapter || c.category;
+      (n.refs ||= []).push({ catKey, cardIdx: i });
+    });
+  }
+
+  // 2) ฎีกา + ลิงก์
+  for (const [catKey, cat] of Object.entries(data.categories)) {
+    (cat.dekaList || []).forEach((d, i) => {
+      const dn = add(`d:${catKey}:${i}`, 'deka', shortDeka(d.title || ''), { catKey, dekaIdx: i });
+      dn.full = d.title;
+
+      const code = detectCode(d.statute, catKey);
+      const secs = new Set();
+      extractSections(d.statute).forEach(s => secs.add(s));
+      (d.tags || []).filter(isSectionTag).forEach(t => extractSections(t).forEach(s => secs.add(s)));
+      extractSections(d.holding).forEach(s => secs.add(s));
+
+      secs.forEach(s => {
+        const sn = sectionNode(code, s);
+        if (sn) link(dn, sn, 'cites');
+        else (dn.orphans ||= []).push(`${code}:${s}`);
+      });
+
+      (d.tags || []).filter(t => !isSectionTag(t)).forEach(t => {
+        const tn = add(`t:${catKey}:${t}`, 'tag', t, { catKey });
+        link(dn, tn, 'tagged');
+      });
+    });
+  }
+
+  // 3) มาตรา ↔ มาตรา (co-cited)
+  const byDeka = new Map();
+  links.filter(l => l.kind === 'cites').forEach(l => {
+    (byDeka.get(l.source) || byDeka.set(l.source, []).get(l.source)).push(l.target);
+  });
+  byDeka.forEach(secs => {
+    if (secs.length > 1 && secs.length <= 4)
+      for (let a = 0; a < secs.length; a++)
+        for (let b = a + 1; b < secs.length; b++)
+          link(idx.get(secs[a]), idx.get(secs[b]), 'cocited');
+  });
+
+  return { nodes, links, idx };
+}
+
+function auditOrphans(graph) {
+  return graph.nodes.filter(n => n.type === 'deka' && !graph.links.some(
+    l => (l.source === n.id || l.target === n.id) && l.kind === 'cites'
+  ));
+}
+
+/* ===== BACKLINKS PANEL ===== */
+function neighborsOf(id, kind) {
+  if (!GRAPH) return [];
+  return GRAPH.links
+    .filter(l => l.kind === kind && (l.source === id || l.target === id))
+    .map(l => GRAPH.idx.get(l.source === id ? l.target : l.source))
+    .filter(Boolean);
+}
+/* ===== GRAPH VIEW (Obsidian-style) ===== */
+let G = { sim:null, nodes:[], links:[], adj:new Map(), byId:new Map(), tf:null,
+          hover:null, sel:null, ctx:null, cv:null, w:0, h:0, dpr:1, bound:false, zoom:null };
+const GRAPH_COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#06b6d4','#a855f7','#ec4899','#84cc16'];
+const catColor = k => GRAPH_COLORS[Math.max(0, Object.keys(DATA.categories).indexOf(k)) % GRAPH_COLORS.length];
+
+function openGraph() { go({ screen: "screen-graph" }); }
+
+function initGraph() {
+  const info = document.getElementById("graph-info");
+  if (!GRAPH || typeof d3 === "undefined") {
+    info.innerHTML = `<p class="search-empty">โหลดกราฟไม่สำเร็จ (GRAPH หรือ d3 ไม่พร้อม) ดู Console</p>`;
+    return;
+  }
+  const wrap = document.getElementById("graph-wrap"), cv = document.getElementById("graph-canvas");
+  G.cv = cv; G.dpr = window.devicePixelRatio || 1;
+  G.w = wrap.clientWidth; G.h = wrap.clientHeight;
+  cv.width = G.w * G.dpr; cv.height = G.h * G.dpr;
+  cv.style.width = G.w + "px"; cv.style.height = G.h + "px";
+  G.ctx = cv.getContext("2d");
+  if (!G.bound) { bindGraphEvents(); G.bound = true; }
+  G.tf = d3.zoomIdentity.translate(G.w / 2, G.h / 2);
+  d3.select(cv).call(G.zoom.transform, G.tf);
+  graphRefilter();
+}
+
+function graphRefilter() {
+  if (!GRAPH || typeof d3 === "undefined") return;
+  const on = id => document.getElementById(id).checked;
+  const showD = on("g-deka"), showT = on("g-tag"), showC = on("g-co"), showI = on("g-iso");
+
+  const keepIds = new Set(GRAPH.nodes
+    .filter(n => n.type === "section" || (n.type === "deka" && showD) || (n.type === "tag" && showT))
+    .map(n => n.id));
+  const ls = GRAPH.links.filter(l => keepIds.has(l.source) && keepIds.has(l.target) && (showC || l.kind !== "cocited"));
+
+  const deg = new Map();
+  ls.forEach(l => {
+    deg.set(l.source, (deg.get(l.source) || 0) + 1);
+    deg.set(l.target, (deg.get(l.target) || 0) + 1);
+  });
+
+  // มาตราที่เชื่อมหลายวิชา = มีการ์ดหลายหมวด หรือถูกฎีกาจากหมวดอื่นอ้าง
+  const cats = new Map();
+  GRAPH.nodes.forEach(n => { if (n.type === "section") cats.set(n.id, new Set((n.refs || []).map(r => r.catKey))); });
+  GRAPH.links.forEach(l => {
+    if (l.kind !== "cites") return;
+    const d = GRAPH.idx.get(l.source), s = GRAPH.idx.get(l.target);
+    if (d && s && cats.has(s.id)) cats.get(s.id).add(d.ref.catKey);
+  });
+
+  const nodes = GRAPH.nodes
+    .filter(n => keepIds.has(n.id) && (showI || (deg.get(n.id) || 0) > 0))
+    .map((n, i) => {
+      const d = deg.get(n.id) || 0, c = cats.get(n.id);
+      return {
+        id: n.id, type: n.type, label: n.label, title: n.title, full: n.full,
+        ref: n.ref, refs: n.refs, deg: d, i,
+        bridge: !!c && c.size > 1,
+        color: n.type === "tag" ? "#94a3b8" : catColor(n.ref && n.ref.catKey),
+        r: n.type === "section" ? 3 + Math.sqrt(d) * 1.6 : n.type === "deka" ? 2.2 : 2.5 + Math.sqrt(d)
+      };
+    });
+
+  const ids = new Set(nodes.map(n => n.id));
+  const links = ls.filter(l => ids.has(l.source) && ids.has(l.target))
+                  .map(l => ({ source: l.source, target: l.target, kind: l.kind }));
+
+  G.adj = new Map();
+  links.forEach(l => {
+    (G.adj.get(l.source) || G.adj.set(l.source, new Set()).get(l.source)).add(l.target);
+    (G.adj.get(l.target) || G.adj.set(l.target, new Set()).get(l.target)).add(l.source);
+  });
+  G.byId = new Map(nodes.map(n => [n.id, n]));
+  G.nodes = nodes; G.links = links; G.sel = null; G.hover = null;
+
+  if (G.sim) G.sim.stop();
+  G.sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(l => l.kind === "cocited" ? 45 : 28).strength(0.4))
+    .force("charge", d3.forceManyBody().strength(-45))
+    .force("center", d3.forceCenter(0, 0))
+    .force("collide", d3.forceCollide(d => d.r + 1))
+    .on("tick", drawGraph);
+
+  selectNode(null);
+}
+
+function nodeAt(px, py) {
+  if (!G.tf) return null;
+  const [x, y] = G.tf.invert([px, py]);
+  let best = null, bd = Infinity;
+  for (const n of G.nodes) {
+    if (n.x == null) continue;
+    const dx = n.x - x, dy = n.y - y, d = dx * dx + dy * dy, rr = n.r + 4;
+    if (d < rr * rr && d < bd) { best = n; bd = d; }
+  }
+  return best;
+}
+
+function bindGraphEvents() {
+  const cv = G.cv, sel = d3.select(cv);
+  G.zoom = d3.zoom().scaleExtent([0.15, 8])
+    .filter(e => e.type === "wheel" || (!e.button && !nodeAt(...d3.pointer(e, cv))))
+    .on("zoom", e => { G.tf = e.transform; drawGraph(); });
+  sel.call(G.zoom);
+
+  sel.call(d3.drag().container(cv)
+    .subject(e => nodeAt(e.x, e.y))
+    .on("start", e => { if (!e.active) G.sim.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
+    .on("drag", e => { const [x, y] = G.tf.invert([e.x, e.y]); e.subject.fx = x; e.subject.fy = y; })
+    .on("end", e => { if (!e.active) G.sim.alphaTarget(0); e.subject.fx = null; e.subject.fy = null; }));
+
+  cv.addEventListener("mousemove", ev => {
+    const r = cv.getBoundingClientRect();
+    const n = nodeAt(ev.clientX - r.left, ev.clientY - r.top);
+    if (n !== G.hover) { G.hover = n; cv.style.cursor = n ? "pointer" : "grab"; drawGraph(); }
+  });
+  cv.addEventListener("click", ev => {
+    const r = cv.getBoundingClientRect();
+    selectNode(nodeAt(ev.clientX - r.left, ev.clientY - r.top));
+  });
+}
+
+function drawGraph() {
+  const { ctx, w, h, dpr, tf } = G;
+  if (!ctx || !tf) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.translate(tf.x, tf.y); ctx.scale(tf.k, tf.k);
+
+  const dark = document.body.dataset.theme === "dark";
+  const focus = G.sel || G.hover, nb = focus ? G.adj.get(focus.id) : null;
+  const near = n => !focus || n === focus || (nb && nb.has(n.id));
+
+  ctx.lineWidth = 1 / tf.k;
+  for (const l of G.links) {
+    const a = l.source, b = l.target;
+    if (a.x == null || b.x == null) continue;
+    const act = focus && (a === focus || b === focus);
+    ctx.globalAlpha = focus ? (act ? 0.9 : 0.06) : 0.3;
+    ctx.strokeStyle = act ? "#f59e0b" : (dark ? "#94a3b8" : "#64748b");
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  for (const n of G.nodes) {
+    if (n.x == null) continue;
+    ctx.globalAlpha = near(n) ? 1 : 0.12;
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.2832);
+    ctx.fillStyle = n.color; ctx.fill();
+    if (n.bridge || n === G.sel) {
+      ctx.lineWidth = 2 / tf.k;
+      ctx.strokeStyle = n === G.sel ? (dark ? "#fff" : "#000") : "#fbbf24";
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = dark ? "#e5e7eb" : "#1e2433";
+  ctx.font = `${11 / tf.k}px Sarabun, sans-serif`;
+  for (const n of G.nodes) {
+    if (n.x == null || !near(n)) continue;
+    const show = n === focus || (nb && nb.has(n.id)) ||
+                 (n.type === "section" && (tf.k > 1.3 || n.deg >= 8)) || tf.k > 2.5;
+    if (show) ctx.fillText(n.label, n.x + n.r + 2, n.y + 3 / tf.k);
+  }
+}
+
+function legendHTML() {
+  const cats = Object.entries(DATA.categories)
+    .map(([k, c]) => `<span><i style="background:${catColor(k)}"></i>${escHTML(c.label)}</span>`).join("");
+  return `<div class="g-legend">
+    <span><b>${G.nodes.length}</b> โหนด · <b>${G.links.length}</b> เส้น</span>${cats}
+    <span><i style="background:transparent;border:2px solid #fbbf24;"></i>มาตราที่เชื่อมข้ามวิชา</span>
+  </div>
+  <p class="search-empty">แตะโหนดเพื่อดูรายละเอียด · ลากโหนดเพื่อจัดวาง · ซูมด้วยล้อเมาส์หรือสองนิ้ว</p>`;
+}
+
+function selectNode(n) {
+  G.sel = n; drawGraph();
+  const el = document.getElementById("graph-info");
+  if (!n) { el.innerHTML = legendHTML(); return; }
+
+  const typeLabel = { section: "มาตรา", deka: "ฎีกา", tag: "แท็ก" }[n.type];
+  const nbs = [...(G.adj.get(n.id) || [])].map(id => G.byId.get(id)).filter(Boolean);
+  const btn = "padding:8px 14px;margin:4px 6px 0 0;";
+  let open = "";
+  if (n.type === "section") {
+    open = (n.refs || []).map(r => `<button class="btn btn-primary" style="${btn}"
+      onclick="jumpToCardIn('${escJS(r.catKey)}',${r.cardIdx})">เปิด Flash Card (${escHTML((DATA.categories[r.catKey] || {}).label || r.catKey)})</button>`).join("");
+  } else if (n.type === "deka") {
+    open = `<button class="btn btn-primary" style="${btn}"
+      onclick="jumpToDekaIn('${escJS(n.ref.catKey)}',${n.ref.dekaIdx})">เปิดฎีกา</button>`;
+  }
+  const title = n.type === "deka" ? (n.full || n.label) : n.label + (n.title ? " — " + n.title : "");
+
+  el.innerHTML = `<div style="margin-top:12px;">
+    <span class="tag tag-blue">${typeLabel}</span>
+    <div style="font-weight:700;">${escHTML(title)}</div>
+    ${n.bridge ? `<div style="font-size:.82rem;color:#b45309;margin-top:4px;">🌉 เชื่อมหลายวิชา</div>` : ""}
+    <div>${open}</div>
+    <div class="deka-section-label">เชื่อมกับ (${nbs.length})</div>
+    ${nbs.slice(0, 40).map(m => `<button type="button" class="ov-section-btn" onclick="graphSelectIdx(${m.i})">${escHTML(m.label)}</button>`).join("")}
+    ${nbs.length > 40 ? `<span class="search-empty"> …และอีก ${nbs.length - 40}</span>` : ""}
+  </div>`;
+}
+
+function graphSelectIdx(i) { const n = G.nodes[i]; if (n) { selectNode(n); centerOn(n); } }
+
+function centerOn(n) {
+  const k = Math.max(G.tf.k, 1.5);
+  d3.select(G.cv).call(G.zoom.transform, d3.zoomIdentity.translate(G.w / 2 - n.x * k, G.h / 2 - n.y * k).scale(k));
+}
+
+function graphSearch(q) {
+  q = toArabic((q || "").trim()).toLowerCase();
+  if (!q || !G.nodes.length) return;
+  const hit = G.nodes.find(n => n.type === "section" && n.label.toLowerCase() === "ม." + q)
+    || G.nodes.find(n => ((n.label || "") + " " + (n.title || "") + " " + (n.full || "")).toLowerCase().includes(q));
+  if (hit) { selectNode(hit); centerOn(hit); }
+}
+
+// กระโดดข้ามหมวดได้ (เช่น ม.420 ที่ถูกอ้างจากหมวดละเมิดขณะดูหมวดหนี้)
+function jumpToDekaIn(catKey, dekaIdx) {
+  go({ screen: "screen-deka-view", catKey, dekaIdx });
+}
+function jumpToCardIn(catKey, cardIdx) {
+  go({ screen: "screen-flash", catKey, cardIdx, pageIdx: 0, flashTab: "keyword" });
+}
+
+function renderBacklinks(catKey, cardIdx) {
+  const el = document.getElementById("backlinks-panel");
+  if (!el) return;
+  const card = ((DATA.categories[catKey] || {}).flashCards || [])[cardIdx];
+  if (!GRAPH || !card) { el.innerHTML = ""; return; }
+
+  const code = catKey === 'criminal_offenses' ? 'CRIM' : 'CCC';
+  const id = `s:${code}:${toArabic(String(card.section)).trim()}`;
+  const dekas = neighborsOf(id, 'cites');
+  const related = neighborsOf(id, 'cocited');
+  if (!dekas.length && !related.length) { el.innerHTML = ""; return; }
+
+  el.innerHTML = `
+    <div class="content-block" style="margin-top:16px;">
+      ${dekas.length ? `
+        <div class="deka-section-label" style="margin-top:0;">📋 ฎีกาที่อ้างมาตรานี้ (${dekas.length})</div>
+        ${dekas.map(n => `
+          <button type="button" class="search-result-item" onclick="jumpToDekaIn('${escJS(n.ref.catKey)}', ${n.ref.dekaIdx})">
+            <span>${escHTML(n.label)}</span><span style="color:var(--text-sub);">→</span>
+          </button>`).join("")}` : ""}
+      ${related.length ? `
+        <div class="deka-section-label">🔗 มาตราที่มักถูกอ้างพร้อมกัน</div>
+        ${related.map(n => {
+          const r = (n.refs || [])[0];
+          return r ? `<button type="button" class="ov-section-btn" onclick="jumpToCardIn('${escJS(r.catKey)}', ${r.cardIdx})" title="${escHTML(n.title || "")}">${escHTML(n.label)}</button>` : "";
+        }).join("")}` : ""}
+    </div>`;
+}
 
 /* ============================================================
    ROUTE / STATE
@@ -568,6 +966,11 @@ async function loadData() {
     DATA = json;
     if (!DATA.categories) DATA.categories = {};
     if (!DATA.groups) DATA.groups = {};
+        try {
+      GRAPH = buildGraph(DATA);
+      console.log("GRAPH:", GRAPH.nodes.length, "nodes,", GRAPH.links.length, "links");
+      console.log("ฎีกาไม่มีลิงก์:", auditOrphans(GRAPH).length);
+    } catch (e) { console.warn("buildGraph failed", e); }
 
     route = window.history.state && window.history.state.screen
       ? { ...DEFAULT_ROUTE, ...window.history.state }
@@ -821,7 +1224,7 @@ function render() {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   const screenEl = document.getElementById(route.screen);
   if (screenEl) screenEl.classList.add("active");
-  window.scrollTo(0, 0);
+  window.scrollTo(0, 0);  document.getElementById("app").style.maxWidth = route.screen === "screen-graph" ? "1100px" : "";
 
   const cat = route.catKey ? DATA.categories[route.catKey] : null;
 
@@ -841,6 +1244,7 @@ function render() {
   else if (route.screen === "screen-deka-view" && cat) viewDekaRender(cat);
   else if (route.screen === "screen-writing-list" && cat) buildWritingItems(cat);
   else if (route.screen === "screen-writing-view" && cat) openWritingRender(cat);
+  else if (route.screen === "screen-graph") initGraph();
 }
 
 function applyPrefs(){
