@@ -576,7 +576,6 @@ button{-webkit-tap-highlight-color:transparent;}
             <input id="graph-search" class="search-box" placeholder="พิมพ์เลขมาตรา เช่น 420 แล้วกด Enter" onkeydown="if(event.key==='Enter')graphSearch(this.value)">
             <label><input type="checkbox" id="g-deka" checked onchange="graphRefilter()"> ฎีกา</label>
             <label><input type="checkbox" id="g-co" checked onchange="graphRefilter()"> มาตราคู่กัน</label>
-            <label><input type="checkbox" id="g-tag" onchange="graphRefilter()"> แท็ก</label>
             <label><input type="checkbox" id="g-iso" onchange="graphRefilter()"> มาตราไร้ลิงก์</label>
         </div>
         <div id="graph-wrap" style="height:70vh;"><canvas id="graph-canvas"></canvas></div>
@@ -626,6 +625,7 @@ button{-webkit-tap-highlight-color:transparent;}
         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
             <button class="btn btn-secondary" onclick="changeFontSize(-0.1)" style="padding:8px 16px;">A−</button>
             <button class="btn btn-secondary" onclick="changeFontSize(0.1)"  style="padding:8px 16px;">A+</button>
+            <button class="btn btn-secondary" onclick="viewSectionInGraph()" style="padding:8px 16px;">🕸 ดูในกราฟ</button>
         </div>
         <button class="fab" onclick="goToRelatedDeka()">Deka</button>
     </section>
@@ -686,6 +686,414 @@ button{-webkit-tap-highlight-color:transparent;}
     </div>
 </div>
 
+<script>
+/* ============================================================================
+   graph-layout.js — Dual-mode Knowledge Graph Layout (Global ⇄ Focus/Fermat)
+   ใช้ร่วมกับ D3 v7 + Canvas (ต่อกับตัวแปร G / drawGraph ของ ANANLEX ได้ทันที)
+
+   ส่วนที่ 1  Pure JS: Fermat's Spiral
+   ส่วนที่ 2  Force ของ Global View (cluster attract + inter-cluster repel)
+   ส่วนที่ 3  LayoutController: state machine + smooth transition + dynamic scaling
+   ส่วนที่ 4  วิธีเสียบเข้ากับ filter/zoom/click/draw เดิม
+   ส่วนที่ 5  Data Schema ตัวอย่าง (Node / Edge)
+   ========================================================================== */
+
+/* ───────────────────────── 1) FERMAT'S SPIRAL (Pure JS) ───────────────────────── */
+
+const GOLDEN_ANGLE_DEG = 137.507764;
+const GOLDEN_ANGLE_RAD = GOLDEN_ANGLE_DEG * Math.PI / 180;   // ≈ 2.39996
+
+/**
+ * จุดที่ n บน Fermat's Spiral:  r = c·√n ,  θ = n·137.507764°
+ * @param {number} n       ลำดับ (เริ่มที่ 1 เพื่อไม่ให้โหนดแรกทับศูนย์กลาง = Main Node)
+ * @param {number} c       ค่าคงที่สเกล (px)
+ * @param {number} rot     มุมหมุนเริ่มต้น (rad) ใช้ทำให้แต่ละ Main Node ไม่เรียงเหมือนกัน
+ * @returns {{x:number,y:number,r:number,theta:number}}  พิกัดสัมพัทธ์จากศูนย์กลาง
+ */
+function fermatPoint(n, c = 14, rot = 0) {
+  const r = c * Math.sqrt(n);
+  const theta = n * GOLDEN_ANGLE_RAD + rot;
+  return { x: r * Math.cos(theta), y: r * Math.sin(theta), r, theta };
+}
+
+/**
+ * คำนวณ c อัตโนมัติ ให้ระยะห่างเพื่อนบ้านใกล้สุด ≈ minGap
+ * (พื้นที่ต่อจุด = π·c²  →  ระยะห่างโดยประมาณ ≈ c·√π ≈ 1.77c)
+ */
+function fermatAutoC(minGap = 26) {
+  return minGap / Math.sqrt(Math.PI);
+}
+
+/**
+ * สร้างพิกัดของ count จุดรอบ (cx, cy)
+ * @returns {Array<{x,y,r,theta,n}>}  (n เริ่มที่ 1)
+ */
+function fermatLayout(count, { c = fermatAutoC(), cx = 0, cy = 0, rot = 0 } = {}) {
+  const out = new Array(count);
+  for (let i = 0; i < count; i++) {
+    const p = fermatPoint(i + 1, c, rot);
+    out[i] = { x: cx + p.x, y: cy + p.y, r: p.r, theta: p.theta, n: i + 1 };
+  }
+  return out;
+}
+
+/* ───────────────────────── helpers ───────────────────────── */
+
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = d3.easeCubicInOut;
+const easeBack = d3.easeBackOut.overshoot(1.3);   // เด้งเกินเป้าเล็กน้อยแล้วนิ่ง
+
+/* ───────────────────────── 2) GLOBAL VIEW FORCES ───────────────────────── */
+
+/**
+ * วางศูนย์กลางของแต่ละกลุ่ม (catKey) บนวงกลมใหญ่ แล้วดึงสมาชิกเข้าหาศูนย์กลางตัวเอง
+ * = แรงดึงดูดภายในกลุ่ม
+ */
+function makeClusterCenters(catKeys, radius = 260) {
+  const centers = new Map();
+  catKeys.forEach((k, i) => {
+    const a = (i / catKeys.length) * Math.PI * 2 - Math.PI / 2;
+    centers.set(k, { x: Math.cos(a) * radius, y: Math.sin(a) * radius });
+  });
+  return centers;
+}
+
+function forceClusterAttract(centers, strength = 0.09) {
+  let nodes;
+  const f = alpha => {
+    for (const n of nodes) {
+      const c = centers.get(n.cat);
+      if (!c) continue;
+      n.vx += (c.x - n.x) * strength * alpha;
+      n.vy += (c.y - n.y) * strength * alpha;
+    }
+  };
+  f.initialize = ns => (nodes = ns);
+  return f;
+}
+
+/**
+ * แรงผลักระหว่างกลุ่ม: ใช้ centroid ของแต่ละกลุ่ม ผลักสมาชิกออกจาก centroid กลุ่มอื่น
+ * ที่อยู่ใกล้กว่า minDist  (O(N·K) ไม่ใช่ O(N²))
+ */
+function forceClusterRepel(strength = 0.6, minDist = 320) {
+  let nodes;
+  const f = alpha => {
+    const cs = new Map();                                  // cat → {x,y,n}
+    for (const n of nodes) {
+      const c = cs.get(n.cat) || cs.set(n.cat, { x: 0, y: 0, n: 0 }).get(n.cat);
+      c.x += n.x; c.y += n.y; c.n++;
+    }
+    cs.forEach(c => { c.x /= c.n; c.y /= c.n; });
+    for (const n of nodes) {
+      for (const [cat, c] of cs) {
+        if (cat === n.cat) continue;
+        const dx = n.x - c.x, dy = n.y - c.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < minDist) {
+          const k = ((minDist - d) / minDist) * strength * alpha;
+          n.vx += (dx / d) * k * 10;
+          n.vy += (dy / d) * k * 10;
+        }
+      }
+    }
+  };
+  f.initialize = ns => (nodes = ns);
+  return f;
+}
+
+/** สร้าง simulation ของ Global View */
+function buildGlobalSimulation(nodes, links, catKeys, onTick) {
+  const centers = makeClusterCenters(catKeys);
+  const sameCat = l => l.source.cat === l.target.cat;
+  return d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id)
+      .distance(l => sameCat(l) ? 24 + 3.2 * Math.sqrt(Math.max(l.source.deg, l.target.deg)) : 220)       // ลิงก์ข้ามกลุ่มยาว+อ่อน
+      .strength(l => sameCat(l) ? 0.45 : 0.02))
+    .force("charge", d3.forceManyBody().strength(d => d.type === "section" ? -70 - 4 * Math.sqrt(d.deg) : -30).distanceMax(260))
+    .force("cluster", forceClusterAttract(centers))
+    .force("repel", forceClusterRepel())
+    .force("collide", d3.forceCollide(d => d.r + 1))
+    .on("tick", onTick);
+}
+
+/* ───────────────────────── 3) LAYOUT CONTROLLER ─────────────────────────
+   State machine:
+        ┌────────── zoom ≥ ENTER_K  หรือ  คลิก Main Node ──────────┐
+        ▼                                                          │
+     GLOBAL  ───────────────────────────────────────────────►   FOCUS(node)
+        ▲                                                          │
+        └────────── zoom < EXIT_K (hysteresis)  หรือ กดพื้นที่ว่าง ──┘
+
+   - Transition ใช้ค่า t ∈ [0,1] ตัวเดียว (tween ด้วย d3.timer) แล้ว
+     ตำแหน่งลูก = lerp(ตำแหน่งตอนเริ่ม, เป้าหมายบนเกลียว, easeInOut(stagger(t, n)))
+   - ทิศขาออก: ปล่อย fx/fy คืนให้ force simulation แล้ว alpha restart เบา ๆ
+   ------------------------------------------------------------------------- */
+
+const LAYOUT = {
+  ENTER_K: 1.5,          // เข้า Focus เมื่อซูม >= 1.5
+  EXIT_K: 1.3,           // ออกเมื่อซูม < 1.3 (hysteresis กันกระพริบ)
+  DURATION: 800,         // ms
+  STAGGER: 0.55,         // 0..1 ความหน่วงของลูกลำดับท้าย ๆ
+  MIN_GAP: 30,           // px ระยะห่างขั้นต่ำบนเกลียว
+  MIN_SCALE: 0.55,       // ขนาดต่ำสุดของลูกที่ไกลสุด
+  FAR_ALPHA: 0.6,        // alpha สุดท้ายของลูกที่ไกลสุด
+  DIM_OTHERS: 0.1,       // alpha ของโหนดที่ไม่เกี่ยวข้องตอน Focus
+  MAX_CHILDREN: 90,      // แสดงลูกบนเกลียวสูงสุดกี่โหนด (เรียงตามความสำคัญ)
+  BOOST: 1.8,            // ขยายขนาดลูกตอน Focus ให้มองเห็นชัด
+  SWIRL: 2.4,            // rad: ลูกหมุนคลี่ออกจากแขนเกลียวตอนเข้า Focus
+  CLEAR_PAD: 40, MAX_GATES: 12, GATE_PAD: 60,          // px: เว้นระยะรอบเกลียวให้โหนดอื่นถูกผลักออก
+};
+
+class LayoutController {
+  /**
+   * @param {object} ctx
+   *   getNodes():  โหนดทั้งหมดที่กำลังแสดง
+   *   getAdj():    Map<id, Set<id>>
+   *   byId:        Map<id, node>
+   *   sim():       d3 simulation ปัจจุบัน
+   *   redraw():    () => void
+   *   screenCenterToWorld(): [x,y]  (จุดกลางจอในพิกัดโลก)
+   */
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.mode = "global";        // 'global' | 'focus'
+    this.focus = null;           // main node
+    this.children = [];          // เรียงตาม n
+    this.childSet = new Set();
+    this.fitK = 1;               // ระดับซูมที่เห็นเกลียวครบ
+    this.exitK = LAYOUT.EXIT_K;
+    this.t = 0;                  // 0 = global, 1 = focus เต็ม
+    this.timer = null;
+    this.manualFocus = false;    // true = ผู้ใช้คลิกเอง → ไม่ auto-exit ด้วยซูม
+    this._debounce = null;
+  }
+
+  /* ---------- เลือกลูกของ Main Node + จัดลำดับ n ---------- */
+  _collectChildren(main) {
+    const { getAdj, byId } = this.ctx;
+    const kids = [...(getAdj().get(main.id) || [])]
+      .map(id => byId.get(id))
+      .filter(n => n && (n.type === "deka" || n.type === "tag"));
+    // ลำดับ n: ฎีกาก่อน แล้วแท็ก; ในกลุ่มเดียวกันเรียงตาม degree มาก→น้อย (สำคัญสุดอยู่ใกล้ศูนย์กลาง)
+    const rank = n => (n.type === "deka" ? 0 : 1);
+    kids.sort((a, b) => rank(a) - rank(b) || b.deg - a.deg);
+    this.totalKids = kids.length;
+    return kids.slice(0, LAYOUT.MAX_CHILDREN);
+  }
+
+  /* ---------- เข้าสู่ Focus Mode ---------- */
+  /* ประตู = มาตราต่างวิชาที่เชื่อมกับ main ทั้งตรงและผ่านฎีกาที่อ้างร่วมกัน */
+  _collectGates(main) {
+    const { getAdj, byId } = this.ctx, adj = getAdj(), w = new Map();
+    const bump = (s, k) => {
+      if (!s || s === main || s.type !== "section" || s.cat === main.cat) return;
+      w.set(s, (w.get(s) || 0) + k);
+    };
+    for (const id of adj.get(main.id) || []) {
+      const a = byId.get(id); if (!a) continue;
+      if (a.type === "section") bump(a, 0);
+      else if (a.type === "deka")
+        for (const id2 of adj.get(a.id) || []) bump(byId.get(id2), 1);
+    }
+    return [...w].sort((p, q) => q[1] - p[1] || q[0].deg - p[0].deg)
+      .slice(0, LAYOUT.MAX_GATES).map(([n, k]) => { n._gw = Math.max(1, k); return n; });
+  }
+
+  enterFocus(main, { manual = false } = {}) {
+    if (!main || main.type !== "section") return;
+    if (this.mode === "focus" && this.focus === main) return;
+
+    if (this.mode === "focus") this._release(true);       // สลับ main ตรง ๆ: ปล่อยของเก่าทันที
+
+    this.mode = "focus";
+    this.focus = main;
+    this.manualFocus = manual;
+    this.children = this._collectChildren(main);
+    this.childSet = new Set(this.children);
+
+    // pin main node ไว้กับที่ และ snapshot ตำแหน่งเริ่มต้นของลูก
+    main.fx = main.x; main.fy = main.y;
+    const c = fermatAutoC(LAYOUT.MIN_GAP);
+    const rot = (hash01(main.id) * Math.PI * 2);          // หมุนไม่เหมือนกันในแต่ละ Main Node
+    const pts = fermatLayout(this.children.length, { c, cx: main.x, cy: main.y, rot });
+    this.children.forEach((n, i) => {
+      n._sx = n.x; n._sy = n.y;                           // start
+      n._tx = pts[i].x; n._ty = pts[i].y;                 // target
+      n._n = i + 1; n._tth = pts[i].theta;                                       // ลำดับบนเกลียว
+      n._rn = pts[i].r;                                   // รัศมีจริง
+      n._baseR = n._baseR ?? n.r;
+    });
+    const spMax = pts.length ? pts[pts.length - 1].r : 1;
+    this.children.forEach(n => { n._gate = false; });
+    const gates = this._collectGates(main);
+    const ringR = gates.length ? spMax + LAYOUT.GATE_PAD : 0;
+    const ga = gates.map(g => ({ g, a: Math.atan2((g.y ?? main.y) - main.y, (g.x ?? main.x) - main.x) }))
+                    .sort((p, q) => p.a - q.a);
+    const gap = Math.min(0.5, 6.283 / (ga.length + 1));
+    for (let it = 0; it < 20; it++) for (let i = 0; i < ga.length; i++) {
+      const j = (i + 1) % ga.length; if (j === i) continue;
+      let d = ga[j].a - ga[i].a; if (j === 0) d += 6.283;
+      if (d < gap) { const s = (gap - d) / 2; ga[i].a -= s; ga[j].a += s; }
+    }
+    ga.forEach(o => {
+      const g = o.g; g._gate = true; g._sx = g.x; g._sy = g.y;
+      g._n = 1; g._tth = o.a; g._rn = ringR; g._baseR = g._baseR ?? g.r;
+    });
+    this.gates = gates; this.nSpiral = this.children.length;
+    this.children = this.children.concat(gates); this.childSet = new Set(this.children);
+    this.maxR = Math.max(spMax, ringR);
+    const [vw, vh] = this.ctx.getViewSize ? this.ctx.getViewSize() : [600, 400];
+    this.fitK = Math.max(0.6, Math.min(3, (Math.min(vw, vh) / 2 * 0.85) / (this.maxR + 24)));
+    // คลิกเอง: ยอมให้ซูมต่ำกว่า 1.3 ได้ถ้าเกลียวใหญ่ (ไม่งั้นเด้งออกทันที)
+    this.exitK = manual ? Math.min(LAYOUT.EXIT_K, this.fitK * 0.7) : LAYOUT.EXIT_K;
+
+    // แรง "เคลียร์พื้นที่": ผลักโหนดอื่นออกนอกวงเกลียว (ไม่ให้ ม.อื่นนั่งทับเกลียว)
+    const simF = this.ctx.sim();
+    if (simF) {
+      const R = this.maxR + LAYOUT.CLEAR_PAD, kids = this.childSet;
+      let all = [];
+      const clear = () => {
+        for (const n of all) {
+          if (n === main || kids.has(n)) continue;
+          const dx = n.x - main.x, dy = n.y - main.y, d = Math.hypot(dx, dy) || 1;
+          if (d < R) { const k = (R - d) * 0.25; n.vx += dx / d * k; n.vy += dy / d * k; }
+        }
+      };
+      clear.initialize = ns => (all = ns);
+      simF.force("focusClear", clear);
+      simF.alpha(Math.max(simF.alpha(), 0.4)).restart();
+    }
+
+    this._tween(1);
+  }
+
+  /* ---------- ออกจาก Focus Mode ---------- */
+  exitFocus() {
+    if (this.mode !== "focus") return;
+    this.mode = "global";
+    this._tween(0, () => this._release(false));
+  }
+
+  _release(immediate) {
+    const main = this.focus;
+    const simR = this.ctx.sim();
+    if (simR) simR.force("focusClear", null);
+    if (main) { main.fx = null; main.fy = null; }
+    this.children.forEach(n => {
+      n.fx = null; n.fy = null;
+      n.sc = 1; n.alpha = 1; n._gate = false;
+      if (n._baseR != null) n.r = n._baseR;
+    });
+    this.children = []; this.childSet = new Set(); this.focus = null; this.t = 0; this.gates = []; this.nSpiral = 0;
+    if (this.timer) { this.timer.stop(); this.timer = null; }
+    const sim = this.ctx.sim();
+    if (sim && !immediate) sim.alpha(0.25).restart();     // ให้ Global ค่อย ๆ จัดตัวใหม่
+  }
+
+  /* ---------- tween ค่า t ไปยัง target (0|1) ---------- */
+  _tween(target, done) {
+    if (this.timer) this.timer.stop();
+    const from = this.t, span = Math.abs(target - from) || 1;
+    const dur = LAYOUT.DURATION * span;
+    const t0 = performance.now();
+    this.timer = d3.timer(() => {
+      const p = clamp01((performance.now() - t0) / dur);
+      this.t = lerp(from, target, p);
+      this._apply();
+      this.ctx.redraw();
+      if (p >= 1) {
+        this.timer.stop(); this.timer = null;
+        this.t = target;
+        if (done) done();
+      }
+    });
+  }
+
+  /* ---------- นำ t ไปคำนวณตำแหน่ง / ขนาด / alpha ของลูกทุกตัว ---------- */
+  _apply() {
+    const N = this.children.length || 1;
+    const S = LAYOUT.STAGGER;
+    this.children.forEach(n => {
+      // stagger: ลูกลำดับต้น ๆ เริ่มก่อน ลำดับท้ายเริ่มทีหลัง แต่ทุกตัวจบเมื่อ t = 1
+      const delay = ((n._n - 1) / N) * S;
+      const lt = clamp01((this.t - delay) / (1 - S));
+      const local = easeInOut(lt);
+
+      // unfurl: เส้นทางโค้งแบบสปริง — หมุนคลี่ออก + เด้งเกินเป้าเล็กน้อยแล้วนิ่งที่จุดเกลียว
+      const ang = n._tth - (1 - local) * LAYOUT.SWIRL;
+      const wx = this.focus.x + Math.cos(ang) * n._rn;
+      const wy = this.focus.y + Math.sin(ang) * n._rn;
+      const wgt = easeBack(lt);
+      n.fx = n.x = lerp(n._sx, wx, wgt);
+      n.fy = n.y = lerp(n._sy, wy, wgt);
+      if (n._gate) { n.sc = lerp(1, 1.5, local); n.r = n._baseR * n.sc; n.alpha = local; return; }
+
+      // Dynamic scaling: ยิ่งไกลศูนย์กลาง (r มาก) ยิ่งเล็กลงเล็กน้อย
+      const far = Math.sqrt(n._n / N);                    // 0..1 สัมพันธ์กับรัศมี (r ∝ √n)
+      const finalScale = lerp(1, LAYOUT.MIN_SCALE, far) * LAYOUT.BOOST;
+      n.sc = lerp(1, finalScale, local);
+      n.r = n._baseR * n.sc;
+
+      // Fade-in ตามลำดับ n: เริ่ม 0 → ค่าปลายทางซึ่งจางลงตามระยะ
+      const finalAlpha = lerp(1, LAYOUT.FAR_ALPHA, far);
+      n.alpha = local * finalAlpha;
+    });
+  }
+
+  /* ---------- เรียกทุกครั้งที่ซูมเปลี่ยน ---------- */
+  onZoom(k) {
+    clearTimeout(this._debounce);
+    this._debounce = setTimeout(() => {
+      if (k >= LAYOUT.ENTER_K && this.mode === "global") {
+        const [wx, wy] = this.ctx.screenCenterToWorld();
+        const main = this._nearestMain(wx, wy);
+        if (main) this.enterFocus(main, { manual: false });
+      } else if (k >= LAYOUT.ENTER_K && this.mode === "focus" && !this.manualFocus) {
+        // ซูมค้างแล้วเลื่อนจอไป Main Node อื่น → สลับโฟกัส
+        const [wx, wy] = this.ctx.screenCenterToWorld();
+        const main = this._nearestMain(wx, wy);
+        if (main && main !== this.focus) this.enterFocus(main, { manual: false });
+      } else if (k < this.exitK && this.mode === "focus") {
+        this.exitFocus();                                  // ซูมออกเสมอ = กลับ Global
+      }
+    }, 120);
+  }
+
+  _nearestMain(wx, wy) {
+    let best = null, bd = Infinity;
+    for (const n of this.ctx.getNodes()) {
+      if (n.type !== "section" || n.x == null) continue;
+      const d = (n.x - wx) ** 2 + (n.y - wy) ** 2;
+      if (d < bd) { bd = d; best = n; }
+    }
+    return best;
+  }
+
+  /* ---------- ใช้ตอน draw: ค่า alpha ของโหนดใดโหนดหนึ่ง ---------- */
+  alphaOf(n) {
+    if (this.mode === "global" && this.t === 0) return null;      // ไม่แทรกแซง
+    if (n === this.focus) return 1;
+    if (this.children.includes(n)) return n.alpha ?? 1;
+    return lerp(1, LAYOUT.DIM_OTHERS, easeInOut(this.t));         // โหนดอื่นจางลง
+  }
+}
+
+/** hash string → 0..1 (ใช้เป็นมุมหมุนเริ่มต้นแบบคงที่ต่อโหนด) */
+function hash01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 10000) / 10000;
+}
+
+
+/** กันลาก Main Node / ลูกที่ถูก pin ไว้ระหว่าง Focus Mode */
+function dragLocked(s) {
+  return !!(G.layout && G.layout.mode === "focus" && s && (s === G.layout.focus || G.layout.children.includes(s)));
+}
+
+</script>
 <script>
 /* ============================================================
    UTILITY
@@ -753,7 +1161,13 @@ function detectCode(statuteText, catKey) {
 }
 
 const isSectionTag = t => /^(?:ม\.|มาตรา)\s*\d/.test(toArabic(t));
-const shortDeka = t => t.replace(/\s*[—–-].*$/, '').replace(/^คำพิพากษาศาลฎีกาที่/, 'ฎีกา').trim();
+const shortDeka = t => {
+  const s = String(t || "");
+  const m = toArabic(s).match(/ฎีกา(?:ที่)?\s*(\d+\/\d+)/);
+  if (m) return `ฎีกา ${m[1]}`;
+  const h = s.replace(/\s*[—–-].*$/, '').replace(/^คำพิพากษาศาลฎีกาที่/, 'ฎีกา').trim();
+  return h.length > 18 ? h.slice(0, 17) + "…" : h;
+};
 
 /* ===== GRAPH: Main ===== */
 function buildGraph(data) {
@@ -849,7 +1263,24 @@ let G = { sim:null, nodes:[], links:[], adj:new Map(), byId:new Map(), tf:null,
 const GRAPH_COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#06b6d4','#a855f7','#ec4899','#84cc16'];
 const catColor = k => GRAPH_COLORS[Math.max(0, Object.keys(DATA.categories).indexOf(k)) % GRAPH_COLORS.length];
 
-function openGraph() { go({ screen: "screen-graph" }); }
+const GSTATE_KEY = "ananlex_graph_v1";
+function loadGraphState() { try { return JSON.parse(localStorage.getItem(GSTATE_KEY) || "null"); } catch (e) { return null; } }
+function saveGraphState() {
+  if (!G.nodes.length) return;
+  const L = G.layout;
+  try {
+    const old = loadGraphState() || {}, pos = old.pos || {};
+    if (!(L && (L.mode === "focus" || L.t > 0)))          // ไม่เก็บตำแหน่งตอนโหนดอยู่บนเกลียว
+      G.nodes.forEach(n => { if (n.x != null) pos[n.id] = [Math.round(n.x), Math.round(n.y)]; });
+    const tf = G.tf ? { x: G.tf.x, y: G.tf.y, k: G.tf.k } : old.tf;
+    localStorage.setItem(GSTATE_KEY, JSON.stringify({ v: 1, pos, tf }));
+  } catch (e) {}
+}
+let _gSaveT = null;
+function saveGraphSoon() { clearTimeout(_gSaveT); _gSaveT = setTimeout(saveGraphState, 600); }
+window.addEventListener("pagehide", saveGraphState);
+
+function openGraph() { go({ screen: "screen-graph", gSel: null, gHi: null }); }
 
 function initGraph() {
   const info = document.getElementById("graph-info");
@@ -862,18 +1293,24 @@ function initGraph() {
   G.ctx = cv.getContext("2d");
   sizeGraphCanvas();
   if (!G.bound) { bindGraphEvents(); G.bound = true; }
-  G.tf = d3.zoomIdentity.translate(G.w / 2, G.h / 2);
+  if (!G.tf) {
+    const s = loadGraphState();
+    G.tf = (s && s.tf) ? d3.zoomIdentity.translate(s.tf.x, s.tf.y).scale(s.tf.k)
+                       : d3.zoomIdentity.translate(G.w / 2, G.h / 2);
+  }
+  G.quiet = true;                      // กันซูมที่ restore ไปกระตุ้น auto-focus
   d3.select(cv).call(G.zoom.transform, G.tf);
+  G.quiet = false;
   graphRefilter();
 }
 
 function graphRefilter() {
   if (!GRAPH || typeof d3 === "undefined") return;
   const on = id => document.getElementById(id).checked;
-  const showD = on("g-deka"), showT = on("g-tag"), showC = on("g-co"), showI = on("g-iso");
+  const showD = on("g-deka"), showC = on("g-co"), showI = on("g-iso");
 
   const keepIds = new Set(GRAPH.nodes
-    .filter(n => n.type === "section" || (n.type === "deka" && showD) || (n.type === "tag" && showT))
+    .filter(n => n.type === "section" || (n.type === "deka" && showD))
     .map(n => n.id));
   const ls = GRAPH.links.filter(l => keepIds.has(l.source) && keepIds.has(l.target) && (showC || l.kind !== "cocited"));
 
@@ -899,7 +1336,11 @@ function graphRefilter() {
       return {
         id: n.id, type: n.type, label: n.label, title: n.title, full: n.full,
         ref: n.ref, refs: n.refs, deg: d, i,
+        cat: (n.ref && n.ref.catKey) || "_", sc: 1, alpha: 1,
         bridge: !!c && c.size > 1,
+        tags: n.type === "deka"
+          ? new Set(((((DATA.categories[n.ref.catKey] || {}).dekaList) || [])[n.ref.dekaIdx] || {}).tags || [])
+          : null,
         color: n.type === "tag" ? "#94a3b8" : catColor(n.ref && n.ref.catKey),
         r: n.type === "section" ? 3 + Math.sqrt(d) * 1.6 : n.type === "deka" ? 2.2 : 2.5 + Math.sqrt(d)
       };
@@ -916,16 +1357,44 @@ function graphRefilter() {
   });
   G.byId = new Map(nodes.map(n => [n.id, n]));
   G.nodes = nodes; G.links = links; G.sel = null; G.hover = null;
+  G.byDeg = [...nodes].sort((a, b) => b.deg - a.deg);
+  nodes.forEach(n => { if (n.tags) n.tags = new Set([...n.tags].filter(t => !isSectionTag(String(t)))); });
 
+  const saved = (loadGraphState() || {}).pos || {};
+  const centers = makeClusterCenters(Object.keys(DATA.categories));
+  let hit = 0;
+  nodes.forEach(n => {
+    const p = saved[n.id];
+    if (p) { n.x = p[0]; n.y = p[1]; hit++; }
+    else {                                                     // โหนดใหม่เริ่มใกล้คลัสเตอร์ตัวเอง
+      const c = centers.get(n.cat) || { x: 0, y: 0 };
+      n.x = c.x + (Math.random() - .5) * 60; n.y = c.y + (Math.random() - .5) * 60;
+    }
+  });
+
+  if (G.layout) { clearTimeout(G.layout._debounce); G.layout._release(true); }
   if (G.sim) G.sim.stop();
-  G.sim = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(l => l.kind === "cocited" ? 45 : 28).strength(0.4))
-    .force("charge", d3.forceManyBody().strength(-45))
-    .force("center", d3.forceCenter(0, 0))
-    .force("collide", d3.forceCollide(d => d.r + 1))
-    .on("tick", drawGraph);
+  G.sim = buildGlobalSimulation(nodes, links, Object.keys(DATA.categories), drawGraph);
+  G.sim.on("end", saveGraphState);
+  G.sim.alpha(hit === nodes.length ? 0.02 : hit > nodes.length * 0.8 ? 0.15 : 1);
+  G.layout = new LayoutController({
+    getNodes: () => G.nodes,
+    getAdj: () => G.adj,
+    byId: G.byId,
+    sim: () => G.sim,
+    redraw: drawGraph,
+    screenCenterToWorld: () => G.tf.invert([G.w / 2, G.h / 2]),
+    getViewSize: () => [G.w, G.h],
+  });
 
-  selectNode(null);
+  G.tagFilter = null; G.hi = null; G.pulse = null; G.trail = G.trail || [];
+  const want = route.gSel;
+  selectNode(null, { keep: true, quiet: true });
+  if (want && !G.byId.has(want) && !on("g-iso")) {            // มาตราไร้ลิงก์ ต้องเปิดตัวกรองก่อน
+    document.getElementById("g-iso").checked = true; return graphRefilter();
+  }
+  const wn = want && G.byId.get(want);
+  if (wn) selectNode(wn, { keep: true, hi: (route.gHi && G.byId.get(route.gHi)) || null });
 }
 
 function nodeAt(px, py) {
@@ -944,14 +1413,14 @@ function bindGraphEvents() {
   const cv = G.cv, sel = d3.select(cv);
   G.zoom = d3.zoom().scaleExtent([0.15, 8])
     .filter(e => e.type === "wheel" || (!e.button && !nodeAt(...d3.pointer(e, cv))))
-    .on("zoom", e => { G.tf = e.transform; drawGraph(); });
+    .on("zoom", e => { G.tf = e.transform; if (G.layout && !G.quiet) G.layout.onZoom(G.tf.k); drawGraph(); saveGraphSoon(); });
   sel.call(G.zoom);
 
   sel.call(d3.drag().container(cv)
     .subject(e => nodeAt(e.x, e.y))
-    .on("start", e => { if (!e.active) G.sim.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
-    .on("drag", e => { const [x, y] = G.tf.invert([e.x, e.y]); e.subject.fx = x; e.subject.fy = y; })
-    .on("end", e => { if (!e.active) G.sim.alphaTarget(0); e.subject.fx = null; e.subject.fy = null; }));
+    .on("start", e => { if (dragLocked(e.subject)) return; if (!e.active) G.sim.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
+    .on("drag", e => { if (dragLocked(e.subject)) return; const [x, y] = G.tf.invert([e.x, e.y]); e.subject.fx = x; e.subject.fy = y; })
+    .on("end", e => { if (dragLocked(e.subject)) return; if (!e.active) G.sim.alphaTarget(0); e.subject.fx = null; e.subject.fy = null; }));
 
   cv.addEventListener("mousemove", ev => {
     const r = cv.getBoundingClientRect();
@@ -973,36 +1442,121 @@ function drawGraph() {
 
   const dark = document.body.dataset.theme === "dark";
   const focus = G.sel || G.hover, nb = focus ? G.adj.get(focus.id) : null;
-  const near = n => !focus || n === focus || (nb && nb.has(n.id));
+  const L = G.layout;
+  const near = n => !focus || n === focus || (nb && nb.has(n.id)) || (L && L.mode === "focus" && L.childSet.has(n));
 
   ctx.lineWidth = 1 / tf.k;
   for (const l of G.links) {
     const a = l.source, b = l.target;
     if (a.x == null || b.x == null) continue;
     const act = focus && (a === focus || b === focus);
-    ctx.globalAlpha = focus ? (act ? 0.9 : 0.06) : 0.3;
+    let la0 = focus ? (act ? 0.9 : 0.06) : 0.3;
+    if (L) { const aa = L.alphaOf(a), ab = L.alphaOf(b); if (aa != null && ab != null) la0 *= Math.min(aa, ab); }
+    if (L && L.mode === "focus" && L.focus &&
+        !((a === L.focus || L.childSet.has(a)) && (b === L.focus || L.childSet.has(b)))) la0 *= 0.25;
+    ctx.globalAlpha = la0;
     ctx.strokeStyle = act ? "#f59e0b" : (dark ? "#94a3b8" : "#64748b");
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
+  if (L && L.mode === "focus" && L.focus) for (const g of L.gates || []) {   // เส้นประตู หนาตามจำนวนฎีการ่วม
+    if (g.x == null) continue;
+    ctx.globalAlpha = 0.55 * (g.alpha ?? 1);
+    ctx.strokeStyle = g.color; ctx.lineWidth = (1 + Math.min(g._gw || 1, 6) * 1.2) / tf.k;
+    ctx.beginPath(); ctx.moveTo(L.focus.x, L.focus.y); ctx.lineTo(g.x, g.y); ctx.stroke();
+  }
+  ctx.lineWidth = 1 / tf.k;
   for (const n of G.nodes) {
     if (n.x == null) continue;
-    ctx.globalAlpha = near(n) ? 1 : 0.12;
+    const lay = L ? L.alphaOf(n) : null;
+    let a = lay != null ? Math.min(lay, near(n) ? 1 : 0.12) : (near(n) ? 1 : 0.12);
+    const tm = G.tagFilter && n.type === "deka" && n.tags ? n.tags.has(G.tagFilter) : null;
+    if (tm === false) a *= 0.15;
+    ctx.globalAlpha = a;
     ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.2832);
     ctx.fillStyle = n.color; ctx.fill();
-    if (n.bridge || n === G.sel) {
+    if (n.bridge || n === G.sel || n === G.hi || tm) {
       ctx.lineWidth = 2 / tf.k;
-      ctx.strokeStyle = n === G.sel ? (dark ? "#fff" : "#000") : "#fbbf24";
+      ctx.strokeStyle = n === G.sel ? (dark ? "#fff" : "#000") : (n === G.hi || tm) ? "#f59e0b" : "#fbbf24";
       ctx.stroke();
+    }
+  }
+  if (G.pulse) {                                       // วงแหวนกะพริบบอก "ตรงนี้"
+    const t = (performance.now() - G.pulse.t0) / 1600, pn = G.pulse.n;
+    if (t >= 1 || pn.x == null) G.pulse = null;
+    else {
+      ctx.globalAlpha = Math.abs(Math.sin(t * Math.PI * 3)) * (1 - t);
+      ctx.strokeStyle = "#f59e0b"; ctx.lineWidth = 3 / tf.k;
+      ctx.beginPath(); ctx.arc(pn.x, pn.y, pn.r + (6 + 34 * t) / tf.k, 0, 6.2832); ctx.stroke();
+      if (!G._raf) G._raf = requestAnimationFrame(() => { G._raf = 0; drawGraph(); });
     }
   }
   ctx.globalAlpha = 1;
   ctx.fillStyle = dark ? "#e5e7eb" : "#1e2433";
   ctx.font = `${11 / tf.k}px Sarabun, sans-serif`;
-  for (const n of G.nodes) {
-    if (n.x == null || !near(n)) continue;
-    const show = n === focus || (nb && nb.has(n.id)) ||
-                 (n.type === "section" && (tf.k > 1.3 || n.deg >= 8)) || tf.k > 2.5;
-    if (show) ctx.fillText(n.label, n.x + n.r + 2, n.y + 3 / tf.k);
+  const inFocus = !!(L && L.mode === "focus" && L.focus);
+  const boxes = [];
+  const tryLabel = n => {
+    if (!n || n.x == null || !n.label) return false;
+    const sx = n.x * tf.k + tf.x + (n.r + 2) * tf.k, sy = n.y * tf.k + tf.y;
+    if (sx < -20 || sx > w || sy < -10 || sy > h + 10) return false;          // นอกจอไม่วาด
+    const base = n._gate ? n.label + " · " + ((DATA.categories[n.cat] || {}).label || "") : n.label;
+    const lim = n._gate ? 28 : 18;
+    const txt = base.length > lim ? base.slice(0, lim - 1) + "…" : base;
+    const bw = txt.length * 6.6 + 6;
+    for (const bx of boxes) if (sx < bx.x + bx.w && sx + bw > bx.x && Math.abs(sy - bx.y) < 12) return false;
+    boxes.push({ x: sx, y: sy, w: bw });
+    const v = L ? L.alphaOf(n) : null;
+    ctx.globalAlpha = v == null ? 1 : v;
+    ctx.fillText(txt, n.x + n.r + 2, n.y + 3 / tf.k);
+    return true;
+  };
+  tryLabel(focus);
+  if (inFocus) {
+    tryLabel(L.focus); tryLabel(G.hover); tryLabel(G.sel);
+    for (const g of L.gates || []) tryLabel(g);
+    tryLabel(G.hi);
+    const cap = Math.min(60, Math.floor(6 * tf.k * tf.k));      // ซูมมาก → ป้ายเยอะขึ้น (LOD)
+    let cnt = 0;
+    for (const n of L.children) { if (cnt >= cap) break; if (n.type === "deka" && tryLabel(n)) cnt++; }
+  } else if (focus) {
+    const cap = Math.min(40, Math.floor(5 * tf.k * tf.k) + 3);
+    const list = (nb ? [...nb] : []).map(id => G.byId.get(id)).filter(Boolean).sort((p, q) => q.deg - p.deg);
+    let cnt = 0;
+    for (const n of list) { if (cnt >= cap) break; if (tryLabel(n)) cnt++; }
+  } else {
+    let cnt = 0;
+    for (const n of (G.byDeg || G.nodes)) {
+      if (cnt >= 60) break;
+      if (((n.type === "section" && (tf.k > 1.3 || n.deg >= 8)) || tf.k > 2.5) && tryLabel(n)) cnt++;
+    }
+  }
+  drawOverlay(dark);
+}
+
+/** ชั้นหน้าจอ: tooltip ชื่อเต็มเมื่อ hover + สถานะ Focus */
+function drawOverlay(dark) {
+  const { ctx, tf, dpr, w, h } = G, L = G.layout;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.font = "12px Sarabun, sans-serif";
+  if (L && L.mode === "focus" && L.focus) {
+    ctx.fillStyle = dark ? "#94a3b8" : "#64748b";
+    ctx.fillText(`Focus ${L.focus.label} · ฎีกา ${L.nSpiral} จาก ${L.totalKids} · ประตู ${(L.gates || []).length}${G.tagFilter ? " · แท็ก: " + G.tagFilter : ""}`, 12, h - 12);
+  }
+  const n = G.hover;
+  if (n && n.x != null) {
+    const full = n.type === "deka" ? (n.full || n.label) : (n.label + (n.title ? " — " + n.title : ""));
+    const t = full.length > 90 ? full.slice(0, 89) + "…" : full;
+    const sx = n.x * tf.k + tf.x, sy = n.y * tf.k + tf.y;
+    const tw = ctx.measureText(t).width + 16;
+    const bx = Math.min(Math.max(8, sx + 12), w - tw - 8), by = Math.max(8, sy - 34);
+    ctx.fillStyle = dark ? "rgba(15,23,42,.94)" : "rgba(255,255,255,.96)";
+    ctx.strokeStyle = dark ? "#334155" : "#cbd5e1";
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx, by, tw, 24, 8); else ctx.rect(bx, by, tw, 24);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = dark ? "#f1f5f9" : "#1e2433";
+    ctx.fillText(t, bx + 8, by + 16);
   }
 }
 
@@ -1016,12 +1570,35 @@ function legendHTML() {
   <p class="search-empty">แตะโหนดเพื่อดูรายละเอียด · ลากโหนดเพื่อจัดวาง · ซูมด้วยล้อเมาส์หรือสองนิ้ว</p>`;
 }
 
-function selectNode(n) {
-  G.sel = n; drawGraph();
+function selectNode(n, o = {}) {
+  G.trail = G.trail || [];
+  const prev = G.sel;
+  G.sel = n; G.hi = o.hi || null; G.tagFilter = null;
+  if (!prev && n) G.trail = [];
+  if (n && prev && prev !== n && !o.noPush) { G.trail.push(prev.id); if (G.trail.length > 30) G.trail.shift(); }
+  if (!o.keep) {                                    // จำสถานะใน history entry นี้ → กด Back แล้วกลับมาที่เดิม
+    route.gSel = n ? n.id : null; route.gHi = G.hi ? G.hi.id : null;
+    persistRoute(); try { history.replaceState(route, ""); } catch (e) {}
+  }
+  const L = G.layout;
+  if (L) {
+    if (n && n.type === "section") { L.enterFocus(n, { manual: true }); centerOn(n); }
+    else if (!n) {
+      L.manualFocus = false; L.exitFocus();
+      if (prev && prev.type === "section" && !o.quiet) {      // ออกจาก Focus: กล้องกลับไปที่โหนด + วงแหวนกะพริบ
+        G.pulse = { n: prev, t0: performance.now() };
+        centerOn(prev, Math.max(0.8, Math.min(G.tf.k, 1.2)));
+      }
+    }
+  }
+  drawGraph();
+  renderInfo(n);
+}
+
+function renderInfo(n) {
   const el = document.getElementById("graph-info");
   if (!n) { el.innerHTML = legendHTML(); return; }
-
-  const typeLabel = { section: "มาตรา", deka: "ฎีกา", tag: "แท็ก" }[n.type];
+  const typeLabel = { section: "มาตรา", deka: "ฎีกา" }[n.type] || "";
   const nbs = [...(G.adj.get(n.id) || [])].map(id => G.byId.get(id)).filter(Boolean);
   const btn = "padding:8px 14px;margin:4px 6px 0 0;";
   let open = "";
@@ -1029,27 +1606,58 @@ function selectNode(n) {
     open = (n.refs || []).map(r => `<button class="btn btn-primary" style="${btn}"
       onclick="jumpToCardIn('${escJS(r.catKey)}',${r.cardIdx})">เปิด Flash Card (${escHTML((DATA.categories[r.catKey] || {}).label || r.catKey)})</button>`).join("");
   } else if (n.type === "deka") {
-    open = `<button class="btn btn-primary" style="${btn}"
-      onclick="jumpToDekaIn('${escJS(n.ref.catKey)}',${n.ref.dekaIdx})">เปิดฎีกา</button>`;
+    open = `<button class="btn btn-primary" style="${btn}" onclick="jumpToDekaIn('${escJS(n.ref.catKey)}',${n.ref.dekaIdx})">เปิดฎีกา</button>`;
   }
+  const back = G.trail.length ? `<button class="btn btn-secondary" style="${btn}" onclick="graphBack()">← ย้อนกลับ</button>` : "";
+
+  let chips = "";                                    // แท็ก = ตัวกรอง ไม่ใช่โหนด
+  if (n.type === "section") {
+    const cnt = new Map();
+    nbs.filter(m => m.type === "deka").forEach(m => (m.tags || new Set()).forEach(t => cnt.set(t, (cnt.get(t) || 0) + 1)));
+    G.tagList = [...cnt].sort((a, b) => b[1] - a[1]).slice(0, 14).map(x => x[0]);
+    chips = G.tagList.length
+      ? `<div class="deka-section-label">กรองฎีกาตามแท็ก</div>` + G.tagList.map((t, i) =>
+          `<button type="button" class="ov-section-btn" id="gtag-${i}" onclick="graphTag(${i})">${escHTML(t)} <small>${cnt.get(t)}</small></button>`).join("")
+      : "";
+  }
+  const gates = (G.layout && G.layout.focus === n) ? (G.layout.gates || []) : [];
+  const gateHtml = gates.length
+    ? `<div class="deka-section-label">ประตูสู่วิชาอื่น (${gates.length})</div>` + gates.map(g =>
+        `<button type="button" class="ov-section-btn" style="border-color:${g.color}" onclick="graphSelectIdx(${g.i})">${escHTML(g.label)} · ${escHTML((DATA.categories[g.cat] || {}).label || "")} <small>×${g._gw}</small></button>`).join("")
+    : "";
   const title = n.type === "deka" ? (n.full || n.label) : n.label + (n.title ? " — " + n.title : "");
 
   el.innerHTML = `<div style="margin-top:12px;">
     <span class="tag tag-blue">${typeLabel}</span>
     <div style="font-weight:700;">${escHTML(title)}</div>
     ${n.bridge ? `<div style="font-size:.82rem;color:#b45309;margin-top:4px;">🌉 เชื่อมหลายวิชา</div>` : ""}
-    <div>${open}</div>
+    <div>${back}${open}</div>
+    ${gateHtml}${chips}
     <div class="deka-section-label">เชื่อมกับ (${nbs.length})</div>
     ${nbs.slice(0, 40).map(m => `<button type="button" class="ov-section-btn" onclick="graphSelectIdx(${m.i})">${escHTML(m.label)}</button>`).join("")}
     ${nbs.length > 40 ? `<span class="search-empty"> …และอีก ${nbs.length - 40}</span>` : ""}
   </div>`;
 }
 
+function graphTag(i) {
+  const t = G.tagList[i];
+  G.tagFilter = G.tagFilter === t ? null : t;
+  document.querySelectorAll('[id^="gtag-"]').forEach(b => { b.style.background = ""; b.style.color = ""; });
+  if (G.tagFilter) { const b = document.getElementById("gtag-" + i); if (b) { b.style.background = "var(--primary)"; b.style.color = "#fff"; } }
+  drawGraph();
+}
+function graphBack() {
+  const id = G.trail.pop(), n = id && G.byId.get(id);
+  if (n) selectNode(n, { noPush: true });
+}
+
 function graphSelectIdx(i) { const n = G.nodes[i]; if (n) { selectNode(n); centerOn(n); } }
 
-function centerOn(n) {
-  const k = Math.max(G.tf.k, 1.5);
-  d3.select(G.cv).call(G.zoom.transform, d3.zoomIdentity.translate(G.w / 2 - n.x * k, G.h / 2 - n.y * k).scale(k));
+function centerOn(n, kk) {
+  const L = G.layout;
+  const k = kk || ((L && L.mode === "focus" && L.focus === n) ? L.fitK : Math.max(G.tf.k, 1.5));
+  d3.select(G.cv).transition().duration(600)
+    .call(G.zoom.transform, d3.zoomIdentity.translate(G.w / 2 - n.x * k, G.h / 2 - n.y * k).scale(k));
 }
 
 function graphSearch(q) {
@@ -1066,6 +1674,21 @@ function jumpToDekaIn(catKey, dekaIdx) {
 }
 function jumpToCardIn(catKey, cardIdx) {
   go({ screen: "screen-flash", catKey, cardIdx, pageIdx: 0, flashTab: "keyword" });
+}
+
+function viewSectionInGraph() {
+  const card = ((DATA.categories[route.catKey] || {}).flashCards || [])[route.cardIdx];
+  if (!card) return;
+  const code = route.catKey === 'criminal_offenses' ? 'CRIM' : 'CCC';
+  go({ screen: "screen-graph", gSel: `s:${code}:${toArabic(String(card.section)).trim()}`, gHi: null });
+}
+function dekaGraphMain(catKey, idx) {                  // มาตราหลักที่ฎีกานี้อ้าง (deg สูงสุด) · ไม่มี = ไม่มีปุ่ม
+  if (!GRAPH) return null;
+  return neighborsOf(`d:${catKey}:${idx}`, 'cites').sort((a, b) => b.deg - a.deg)[0] || null;
+}
+function viewDekaInGraph(i) {
+  const m = dekaGraphMain(route.catKey, i);
+  if (m) go({ screen: "screen-graph", gSel: m.id, gHi: `d:${route.catKey}:${i}` });
 }
 
 function renderBacklinks(catKey, cardIdx) {
@@ -1111,6 +1734,8 @@ const DEFAULT_ROUTE = {
   writingIdx: 0,
   flashTab: "keyword",
   dekaTab: "keyword",
+  gSel: null,
+  gHi: null,
 };
 
 let route = { ...DEFAULT_ROUTE };
@@ -1132,6 +1757,7 @@ function persistRoute() {
 }
 
 function go(partial, opts) {
+  if (route.screen === "screen-graph") saveGraphState();
   opts = opts || {};
   route = { ...route, ...partial };
   persistRoute();
@@ -1145,6 +1771,7 @@ function go(partial, opts) {
 }
 
 window.addEventListener("popstate", function (e) {
+  if (route.screen === "screen-graph") saveGraphState();
   if (navDepth > 0) navDepth--;
   route = e.state ? { ...DEFAULT_ROUTE, ...e.state } : loadRouteFromStorage();
   persistRoute();
@@ -1538,7 +2165,7 @@ function buildCategoryMenu() {
     </div>`).join("");
 
   const st = document.getElementById("graph-cta-stat");
-  if (st && GRAPH) st.textContent = `${GRAPH.nodes.length} โหนด · ${GRAPH.links.length} เส้นเชื่อม`;
+  if (st && GRAPH) st.textContent = `${GRAPH.nodes.filter(n => n.type !== "tag").length} โหนด · ${GRAPH.links.filter(l => l.kind !== "tagged").length} เส้นเชื่อม`;
 }
 
 function renderMindmapTree(nodes) {
@@ -2206,6 +2833,7 @@ function viewDekaRender(cat) {
       <div class="deka-ref">📌 หลักการสำคัญ: ${nl(d.principle)}</div>
       ${quizHtml}
       <div style="font-size:0.78rem;color:var(--text-sub);text-align:center;margin-top:18px;">ฎีกาที่ ${i + 1} / ${dekaListArr.length}</div>
+      ${dekaGraphMain(route.catKey, i) ? `<button class="btn btn-secondary" style="width:100%;margin-top:14px;" onclick="viewDekaInGraph(${i})">🕸 ดูในกราฟ</button>` : ""}
       <div class="deka-nav-row">
         <button class="btn btn-secondary" onclick="prevDeka()" ${i === 0 ? "disabled" : ""}>← ฎีกาก่อนหน้า</button>
         <button class="btn btn-primary" onclick="nextDeka()" ${i === dekaListArr.length - 1 ? "disabled" : ""}>ฎีกาถัดไป →</button>
