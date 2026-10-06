@@ -481,8 +481,7 @@ button{-webkit-tap-highlight-color:transparent;}
 #graph-canvas{display:block;border-radius:14px;background:var(--bg);touch-action:none;cursor:grab;}
 .g-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--text-sub);margin-top:10px;}
 .g-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;}
-
-    </style>
+</style>
 </head>
 <body data-theme="light">
 
@@ -558,6 +557,17 @@ button{-webkit-tap-highlight-color:transparent;}
         </span>
         <span class="gc-go">→</span>
     </button>
+    <div class="content-block" style="padding:16px;">
+    <input id="home-search-input" class="search-box"
+           placeholder="ค้นหามาตราหรือฎีกาทุกวิชา เช่น 420 หรือ ละเมิด"
+           oninput="homeSearch()" onkeydown="homeSearchEnter(event)">
+    <div class="tab-row" id="home-scope" style="margin-top:10px;">
+        <button class="tab-btn active" data-scope="all" onclick="setHomeScope('all')">ทั้งหมด</button>
+        <button class="tab-btn" data-scope="civil" onclick="setHomeScope('civil')">แพ่ง</button>
+        <button class="tab-btn" data-scope="criminal" onclick="setHomeScope('criminal')">อาญา</button>
+    </div>
+    <div id="home-search-results"></div>
+</div>
     <h2>เลือกหมวดวิชากฎหมาย</h2>
     <div id="category-grid"></div>
 </section>
@@ -577,6 +587,8 @@ button{-webkit-tap-highlight-color:transparent;}
             <label><input type="checkbox" id="g-deka" checked onchange="graphRefilter()"> ฎีกา</label>
             <label><input type="checkbox" id="g-co" checked onchange="graphRefilter()"> มาตราคู่กัน</label>
             <label><input type="checkbox" id="g-iso" onchange="graphRefilter()"> มาตราไร้ลิงก์</label>
+            <button id="hand-toggle" class="btn btn-secondary" type="button" onclick="window.HandGestures.toggle()"> ควบคุมด้วยมือ</button>
+            <button id="graph-fs-btn" class="btn btn-secondary" type="button" onclick="window.GraphFullscreen.toggle()" title="เต็มจอ">⛶ เต็มจอ</button>
         </div>
         <div id="graph-wrap" style="height:70vh;"><canvas id="graph-canvas"></canvas></div>
         <div id="graph-info"></div>
@@ -602,7 +614,7 @@ button{-webkit-tap-highlight-color:transparent;}
             </div>
             <div id="flash-tab-panel-keyword" class="tab-panel">
                 <input type="text" id="flash-search-input" class="search-box" placeholder="เช่น มาตรา 420 หรือ เจตนา" oninput="performSearchFlash(this.value)" onkeydown="searchFlashOnEnter(event)">
-                <div id="flash-search-results" style="margin-top:10px;"></div>
+                <div id="flash-search-results" style="margin-top:10px;"></div><div id="flash-search-cross"></div>
             </div>
             <div id="flash-tab-panel-browse" class="tab-panel">
                 <p style="color:var(--text-sub);font-size:0.8rem;margin:0 0 10px;">แตะ "ลักษณะ" เพื่อขยายดูหมวด/ส่วน แล้วแตะเลขมาตราเพื่อไปดู Flash Card ทันที</p>
@@ -623,10 +635,8 @@ button{-webkit-tap-highlight-color:transparent;}
             <button id="nextBtn" class="btn btn-primary" onclick="nextSection()">ถัดไป</button>
         </div>
         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
-            <button class="btn btn-secondary" onclick="changeFontSize(-0.1)" style="padding:8px 16px;">A−</button>
-            <button class="btn btn-secondary" onclick="changeFontSize(0.1)"  style="padding:8px 16px;">A+</button>
-            <button class="btn btn-secondary" onclick="viewSectionInGraph()" style="padding:8px 16px;">🕸 ดูในกราฟ</button>
-        </div>
+    <button class="btn btn-secondary" onclick="viewSectionInGraph()" style="padding:8px 16px;">🕸 ดูในกราฟ</button>
+</div>
         <button class="fab" onclick="goToRelatedDeka()">Deka</button>
     </section>
 
@@ -642,7 +652,7 @@ button{-webkit-tap-highlight-color:transparent;}
             </div>
             <div id="deka-tab-panel-keyword" class="tab-panel">
                 <input type="text" id="deka-search-input" class="search-box" placeholder="เช่น ละเมิด หรือ นิติกรรม" oninput="performSearchDeka(this.value)" onkeydown="searchDekaOnEnter(event)">
-                <div id="deka-search-results" style="margin-top:10px;"></div>
+                <div id="deka-search-results" style="margin-top:10px;"></div><div id="deka-search-cross"></div>
             </div>
             <div id="deka-tab-panel-browse" class="tab-panel">
                 <p style="color:var(--text-sub);font-size:0.8rem;margin:0 0 10px;"> แตะหมวดเพื่อขยายดูตามมาตรา</p>
@@ -1132,7 +1142,15 @@ const QCE_CONFIG = {
    DATA (โหลดจาก data.json ที่ผู้ใช้มีอยู่แล้ว)
    ============================================================ */
 let DATA = {};let GRAPH = null;
-
+function renderCross(query, kind) {
+  const el = document.getElementById(kind === "card" ? "flash-search-cross" : "deka-search-cross");
+  if (!el) return;
+  if (!String(query || "").trim()) { el.innerHTML = ""; return; }
+  const r = searchAll(query, "all", { skipCat: route.catKey });
+  const hits = kind === "card" ? r.cards : r.dekas;
+  el.innerHTML = hits.length
+    ? `<div class="deka-section-label">พบในวิชาอื่น (${hits.length})</div>` + hitsHTML(hits) : "";
+}
 /* ===== GRAPH: Parsing helpers ===== */
 const THAI_DIGITS = '๐๑๒๓๔๕๖๗๘๙';
 const toArabic = s => s.replace(/[๐-๙]/g, d => THAI_DIGITS.indexOf(d));
@@ -1160,7 +1178,7 @@ function detectCode(statuteText, catKey) {
   return catKey === 'criminal_offenses' ? 'CRIM' : 'CCC';
 }
 
-const isSectionTag = t => /^(?:ม\.|มาตรา)\s*\d/.test(toArabic(t));
+const isSectionTag = t => /^(?:(?:ม\.|มาตรา)\s*)?\d/.test(toArabic(String(t)));
 const shortDeka = t => {
   const s = String(t || "");
   const m = toArabic(s).match(/ฎีกา(?:ที่)?\s*(\d+\/\d+)/);
@@ -1212,13 +1230,16 @@ function buildGraph(data) {
       const code = detectCode(d.statute, catKey);
       const secs = new Set();
       extractSections(d.statute).forEach(s => secs.add(s));
-      (d.tags || []).filter(isSectionTag).forEach(t => extractSections(t).forEach(s => secs.add(s)));
-      extractSections(d.holding).forEach(s => secs.add(s));
+     (d.tags || []).filter(isSectionTag).forEach(t => {
+  const x = toArabic(String(t)).trim();
+  if (/^\d+(\/\d+)?$/.test(x)) secs.add(x);
+  else extractSections(t).forEach(s => secs.add(s));
+});
+secs.forEach(s => link(dn, sectionNode(code, s), 'cites'));
 
-      secs.forEach(s => {
-        const sn = sectionNode(code, s);
-        if (sn) link(dn, sn, 'cites');
-        else (dn.orphans ||= []).push(`${code}:${s}`);
+      (d.tags || []).filter(t => !isSectionTag(t)).forEach(t => {
+        const tn = add(`t:${catKey}:${t}`, 'tag', t, { catKey });
+        link(dn, tn, 'tagged');
       });
 
       (d.tags || []).filter(t => !isSectionTag(t)).forEach(t => {
@@ -1407,6 +1428,32 @@ function nodeAt(px, py) {
     if (d < rr * rr && d < bd) { best = n; bd = d; }
   }
   return best;
+}
+
+/* หมายเหตุ: ปุ่มเต็มจอจัดการโดย GraphFullscreen ในโมดูล hand-gestures (window.GraphFullscreen) */
+
+function activateGraphNode(n) {
+  if (!n) return;
+  if (n.type === "section") {
+    selectNode(n);
+  } else if (n.type === "deka" && n.ref) {
+    jumpToDekaIn(n.ref.catKey, n.ref.dekaIdx);
+  } else {
+    selectNode(n);
+  }
+}
+
+
+function graphOverview() {
+  if (!G || !G.cv || !G.zoom) return;
+  selectNode(null);
+  const k = Math.min(1, G.tf ? G.tf.k : 1);
+  const x = G.w / 2, y = G.h / 2;
+  G.quiet = true;
+  d3.select(G.cv).call(G.zoom.transform, d3.zoomIdentity.translate(x, y).scale(k));
+  G.quiet = false;
+  if (G.layout && G.layout.exitFocus) G.layout.exitFocus();
+  drawGraph();
 }
 
 function bindGraphEvents() {
@@ -1719,7 +1766,92 @@ function renderBacklinks(catKey, cardIdx) {
         }).join("")}` : ""}
     </div>`;
 }
+/* ===== GLOBAL SEARCH (ทุกวิชา) ===== */
+const CODE_LABEL = { civil: "แพ่ง", criminal: "อาญา" };
+const catCodeOf = k => {
+  const c = DATA.categories[k] || {};
+  return (c.group === "criminal" || k === "criminal_offenses") ? "criminal" : "civil";
+};
+let _sidx = null;
+function buildSearchIndex() {
+  _sidx = [];
+  Object.entries(DATA.categories).forEach(([catKey, cat]) => {
+    const code = catCodeOf(catKey);
+    (cat.flashCards || []).forEach((c, idx) => {
+      let text = ""; try { text = JSON.stringify(c).toLowerCase(); } catch (e) {}
+      _sidx.push({ kind: "card", catKey, code, idx,
+        sec: toArabic(String(c.section || "")).trim().toLowerCase(),
+        label: `มาตรา ${c.section || "?"} — ${c.title || ""}`, text });
+    });
+    (cat.dekaList || []).forEach((d, idx) => {
+      let text = ""; try { text = JSON.stringify(d).toLowerCase(); } catch (e) {}
+      _sidx.push({ kind: "deka", catKey, code, idx,
+        secs: [...getDekaSectionsForItem(d)], label: d.title || "ไม่มีชื่อ", text });
+    });
+  });
+}
+function searchAll(query, scope, o) {
+  o = o || {};
+  const q = toArabic(String(query || "").trim()).toLowerCase();
+  const out = { cards: [], dekas: [] };
+  if (!q) return out;
+  if (!_sidx) buildSearchIndex();
+  const isNum = /^\d+(\/\d+)?$/.test(q);
+  for (const e of _sidx) {
+    if (scope && scope !== "all" && e.code !== scope) continue;
+    if (o.skipCat && e.catKey === o.skipCat) continue;
+    let rank = 0;
+    if (e.kind === "card") {
+      if (e.sec === q) rank = 3;
+      else if (!isNum && e.text.includes(q)) rank = 1;
+    } else {
+      if (isNum && e.secs.includes(q)) rank = 2;
+      else if (q.includes("/") && e.label.toLowerCase().includes(q)) rank = 2;
+      else if (!isNum && e.text.includes(q)) rank = 1;
+    }
+    if (rank) (e.kind === "card" ? out.cards : out.dekas).push({ ...e, rank });
+  }
+  out.cards.sort((a, b) => b.rank - a.rank);
+  out.dekas.sort((a, b) => b.rank - a.rank);
+  return out;
+}
+function hitsHTML(hits) {
+  return hits.slice(0, 40).map(h => {
+    const subj = (DATA.categories[h.catKey] || {}).label || "";
+    const fn = h.kind === "card" ? "jumpToCardIn" : "jumpToDekaIn";
+    return `<button type="button" class="search-result-item" onclick="${fn}('${escJS(h.catKey)}',${h.idx})">
+      <span><span class="tag ${h.code === "criminal" ? "tag-orange" : "tag-blue"}" style="margin:0 6px 0 0;">${CODE_LABEL[h.code]}</span>
+      <span class="tag tag-purple" style="margin:0 8px 0 0;">${escHTML(subj)}</span>${escHTML(h.label)}</span>
+      <span style="color:var(--text-sub);">→</span></button>`;
+  }).join("") + (hits.length > 40
+    ? `<div class="search-empty">…และอีก ${hits.length - 40} รายการ พิมพ์ให้เฉพาะเจาะจงขึ้น</div>` : "");
+}
 
+let homeScope = "all", _homeT = null;
+function setHomeScope(s) {
+  homeScope = s;
+  document.querySelectorAll("#home-scope .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.scope === s));
+  homeSearch(true);
+}
+function homeSearch(now) { clearTimeout(_homeT); _homeT = setTimeout(runHomeSearch, now ? 0 : 150); }
+function runHomeSearch() {
+  const el = document.getElementById("home-search-results");
+  const q = document.getElementById("home-search-input").value;
+  if (!q.trim()) { el.innerHTML = ""; return; }
+  const r = searchAll(q, homeScope);
+  if (!r.cards.length && !r.dekas.length) {
+    el.innerHTML = `<div class="search-empty" style="margin-top:10px;">ไม่พบ "${escHTML(q)}"</div>`; return;
+  }
+  el.innerHTML = `<div style="margin-top:10px;">` +
+    (r.cards.length ? `<div class="deka-section-label">มาตรา (${r.cards.length})</div>` + hitsHTML(r.cards) : "") +
+    (r.dekas.length ? `<div class="deka-section-label">ฎีกา (${r.dekas.length})</div>` + hitsHTML(r.dekas) : "") + `</div>`;
+}
+function homeSearchEnter(e) {
+  if (e.key !== "Enter") return;
+  const r = searchAll(e.target.value, homeScope);
+  if (r.cards[0]) jumpToCardIn(r.cards[0].catKey, r.cards[0].idx);
+  else if (r.dekas[0]) jumpToDekaIn(r.dekas[0].catKey, r.dekas[0].idx);
+}
 /* ============================================================
    ROUTE / STATE
    ============================================================ */
@@ -2080,14 +2212,6 @@ function toggleTheme() {
   document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
   try { localStorage.setItem("slb_theme", document.body.dataset.theme); } catch(e){}
 }
-function changeFontSize(delta) {
-  currentFontSize = Math.min(1.6, Math.max(0.8, currentFontSize + delta));
-  document.getElementById("app").style.fontSize = currentFontSize + "rem";
-  try { localStorage.setItem("slb_font", currentFontSize); } catch(e){}
-
-  currentFontSize = Math.min(1.6, Math.max(0.8, currentFontSize + delta));
-  document.getElementById("app").style.fontSize = currentFontSize + "rem";
-}
 
 /* ============================================================
    NAVIGATION HELPERS
@@ -2236,6 +2360,30 @@ function dqImport(){
    หน้าเมนูหลักของวิชา (4 การ์ด)
    ============================================================ */
    
+   function swipeCard(dir) {
+  const cards = (DATA.categories[route.catKey] || {}).flashCards || [];
+  const n = route.cardIdx + dir;
+  if (n < 0 || n >= cards.length) return;
+  go({ cardIdx: n, pageIdx: 0 }, { replace: true });
+}
+function bindFlashSwipe() {
+  const el = document.getElementById("flashcard-main");
+  if (!el || el._swipe) return;
+  el._swipe = true;
+  el.style.touchAction = "pan-y";               // ยังเลื่อนหน้าขึ้นลงได้ตามปกติ
+  let sx = 0, sy = 0, t0 = 0, on = false;
+  el.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1) return;
+    on = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY; t0 = Date.now();
+  }, { passive: true });
+  el.addEventListener("touchend", e => {
+    if (!on) return; on = false;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - t0 > 800) return;
+    e.preventDefault();                          // กัน click (nextPage) ซ้อนหลังปัด
+    swipeCard(dx < 0 ? 1 : -1);                  // ปัดซ้าย = มาตราถัดไป, ปัดขวา = มาตราก่อนหน้า
+  }, { passive: false });
+}
 function buildHomeContent(cat) { 
   const pg = dqProgress(route.catKey, cat);
   document.getElementById("home-content").innerHTML = `
@@ -2541,6 +2689,7 @@ let lastDekaResults  = [];
 function performSearchFlash(query) {
   const resultsEl = document.getElementById("flash-search-results");
   if (!resultsEl) return;
+   renderCross(query, "card"); 
   const q = (query || "").trim().toLowerCase();
   lastFlashResults = [];
   const cat = DATA.categories[route.catKey];
@@ -2582,6 +2731,7 @@ function performSearchFlash(query) {
 function performSearchDeka(query) {
   const resultsEl = document.getElementById("deka-search-results");
   if (!resultsEl) return;
+  renderCross(query, "deka");
   const q = (query || "").trim().toLowerCase();
   lastDekaResults = [];
   const cat = DATA.categories[route.catKey];
@@ -2618,12 +2768,20 @@ function searchFlashOnEnter(event) {
   event.preventDefault();
   performSearchFlash(event.target.value);
   if (lastFlashResults.length > 0) jumpToFlashCard(lastFlashResults[0].idx);
+  else {
+    const x = searchAll(event.target.value, "all", { skipCat: route.catKey }).cards[0];
+    if (x) jumpToCardIn(x.catKey, x.idx);
+  }
 }
 function searchDekaOnEnter(event) {
   if (event.key !== "Enter") return;
   event.preventDefault();
   performSearchDeka(event.target.value);
   if (lastDekaResults.length > 0) jumpToDeka(lastDekaResults[0].idx);
+  else {
+    const x = searchAll(event.target.value, "all", { skipCat: route.catKey }).dekas[0];
+    if (x) jumpToDekaIn(x.catKey, x.idx);
+  }
 }
 
 function quickSearchFlash(term) {
@@ -3150,7 +3308,727 @@ function renderScoreResult(R) {
     </div>`;
 }
 
-window.addEventListener("DOMContentLoaded", loadData);
+window.addEventListener("DOMContentLoaded", () => { loadData(); bindFlashSwipe(); });
+</script>
+<script type="module">
+/* ============================================================================
+   hand-gestures.js v2 — MediaPipe Hands → Lexnection Graph (ES Module)
+
+   ท่าทาง
+     ☝️ ชี้นิ้วชี้             → cursor + hover
+     🤏 Pinch 1 ครั้ง         → เลือกโหนด (เข้า Focus) / พื้นที่ว่าง = ยกเลิก
+     🤏🤏 Pinch 2 ครั้งเร็ว ๆ   → เปิดมาตรา(Flash Card) / ฎีกา ทันที ไม่ต้องเลื่อนลงไปกดปุ่ม
+     🖐 ฝ่ามือเปิดข้างเดียว    → ปัด/ลากไปทิศไหน กราฟเลื่อนไปทิศนั้น (มี inertia)
+     🙌 สองมือ ถ่าง/หุบ        → Zoom (k ≥ 1.5 → Fermat's Spiral โดย LayoutController)
+     ✊✊ กำสองมือค้างไว้       → กลับ Overview (ออกจาก Focus + fit ทั้งกราฟ)
+   + ปุ่ม ⛶ เต็มจอ ของหน้า Graph  (GraphFullscreen)
+
+   Events (window + instance): node-select, node-open, graph-zoom, graph-pan,
+                               graph-overview, layout-fermat, hand-state
+   ต้องการ global ของ ANANLEX: G, d3, route, nodeAt, selectNode, drawGraph,
+                               jumpToCardIn, jumpToDekaIn
+   ========================================================================== */
+
+
+const CFG = {
+  maxHands: 2, modelComplexity: 0, minDetect: 0.6, minTrack: 0.5,
+  region: { x0: 0.12, x1: 0.88, y0: 0.12, y1: 0.88 },    // ส่วนของภาพกล้องที่แมปเต็มหน้าจอ
+  euro: { minCutoff: 1.5, beta: 0.01, dCutoff: 1.0 },     // One Euro filter
+  // โหมดพัก
+  sleepPollMs: 100,        // ตอนพัก: เทียบภาพจิ๋วทุกกี่ ms
+  halfMs: 200,             // ตอนตื่นครึ่ง: เรียกโมเดลทุกกี่ ms (~5 ครั้ง/วินาที)
+  motionDiff: 25, motionFrac: 0.03,   // พิกเซลที่ต่าง > 25 เกิน 3% = มีการขยับ
+  halfToSleepMs: 1000,     // ตื่นครึ่งแล้วไม่เจอมือ → กลับไปพัก
+  activeToSleepMs: 1500,   // ทำงานเต็มแล้วมือหาย → กลับไปพัก
+  // ชี้ค้างเพื่อคลิก
+  dwellMs: 800,
+  lockNodeMs: 1400,        // หลังคลิกโหนด: ล็อก (รอกล้อง/เลย์เอาต์เลื่อนจนนิ่ง)
+  lockDomMs: 800,
+  magnetPx: 28, nodeMagnetPx: 20,
+  // โบกฝ่ามือเลื่อน
+  palmFrames: 3, panGain: 1.5, panDead: 2, velEma: 0.5,
+  inertiaDecay: 0.94, inertiaMin: 0.3,
+  // สองมือ
+  zoomAlpha: 0.25, zoomDeadband: 0.01, zoomStableFrames: 4, fermatK: 1.5,
+  fistHoldMs: 500,
+  // นิ้ว (fingerStates ใช้)
+  extendRatio: 1.25, curlRatio: 1.1,
+  overviewMs: 700, lostMs: 400,
+  hands_js: "https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js",
+  hands_base: "https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/",
+};
+
+const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const FINGERS = [[8, 6], [12, 10], [16, 14], [20, 18]];       // [tip, pip] ชี้/กลาง/นาง/ก้อย
+
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const GR = () => (typeof G !== "undefined" ? G : null);
+const RT = () => (typeof route !== "undefined" ? route : null);
+const d2 = (a, b, ar) => ((a.x - b.x) * ar) ** 2 + (a.y - b.y) ** 2;   // ระยะ² ไม่ sqrt
+
+function fingerStates(lm, ar) {
+  let ext = 0, curl = 0;
+  for (const [t, p] of FINGERS) {
+    const a = d2(lm[t], lm[0], ar), b = d2(lm[p], lm[0], ar);
+    if (a > b * CFG.extendRatio) ext++; else if (a < b * CFG.curlRatio) curl++;
+  }
+  return { ext, curl };
+}
+const CHAIN = new Set(["screen-graph", "screen-flash", "screen-deka-list", "screen-deka-view"]);
+const CLICKABLE = "button,a[href],input,select,textarea,label,summary,[onclick]";
+ 
+/** One Euro filter 1 แกน — ตัดมือสั่นตอนช้า แต่ตามทันตอนเร็ว */
+class OneEuro {
+  constructor(c) { this.c = c; this.reset(); }
+  reset() { this.t = null; this.x = 0; this.dx = 0; }
+  _a(cut, dt) { const tau = 1 / (2 * Math.PI * cut); return 1 / (1 + tau / dt); }
+  filter(v, t) {
+    if (this.t == null) { this.t = t; this.x = v; this.dx = 0; return v; }
+    const dt = Math.max((t - this.t) / 1000, 1e-3); this.t = t;
+    this.dx += this._a(this.c.dCutoff, dt) * ((v - this.x) / dt - this.dx);
+    const cut = this.c.minCutoff + this.c.beta * Math.abs(this.dx);
+    this.x += this._a(cut, dt) * (v - this.x);
+    return this.x;
+  }
+}
+ 
+export class HandGestureController extends EventTarget {
+  constructor(config = {}) {
+    super();
+    this.cfg = { ...CFG, ...config };
+    this.running = false; this.starting = false; this.wantOn = false;
+    this.hands = null; this.stream = null; this.video = null; this.ui = null;
+    this.raf = 0; this.busy = false; this.lastT = -1;
+    this.hot = null; this.exitBtn = null; this.backBtn = null;
+    this._resetState();
+    // สลับแท็บ/ซ่อนหน้า → ปิดกล้อง (ไม่เปิดคืนเอง)
+    document.addEventListener("visibilitychange", () => { if (document.hidden && this.running) this.stop(true); });
+  }
+ 
+  _resetState() {
+    const e = this.cfg.euro, now = performance.now();
+    this.fx = new OneEuro(e); this.fy = new OneEuro(e);     // เคอร์เซอร์ (ปลายนิ้วชี้)
+    this.pfx = new OneEuro(e); this.pfy = new OneEuro(e);   // ฝ่ามือ (เลื่อน)
+    this.cur = null; this.wasPoint = false;
+    this.dwell = { key: null, t0: 0, lockUntil: 0, lastKey: null };
+    this.lostAt = 0; this.mode = "none";
+    this.palmFrames = 0;
+    this.pan = { active: false, mode: "graph", lx: 0, ly: 0, vx: 0, vy: 0 };
+    this.twoCount = 0; this.zoom = null; this.kS = null; this.fermat = false;
+    this.fist = { since: 0, fired: false };
+    this._clk = []; this._clkT = 0;
+    this.sleep = "half"; this.stateT = now; this.lastHandAt = now; this.lastRun = 0; this.prevLum = null;
+  }
+ 
+  emit(name, detail) {
+    const mk = () => new CustomEvent(name, { detail });
+    this.dispatchEvent(mk()); window.dispatchEvent(mk());
+  }
+ 
+  /* ---------------- lifecycle ---------------- */
+  async toggle() { return this.running ? this.stop(true) : this.start(); }
+ 
+  async start({ auto = false } = {}) {
+    if (this.running || this.starting) return;
+    const r = RT();
+    if (!r || r.screen !== "screen-graph") return;              // เปิดได้ที่หน้ากราฟเท่านั้น
+    this.starting = true;
+    this._setBtn("⏳ กำลังเปิดกล้อง…");
+    try {
+      await this._loadMediaPipe();
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 30 }, facingMode: "user" }, audio: false });
+      this._buildUI();
+      this.video.srcObject = this.stream;
+      await this.video.play();
+ 
+      this.hands = new window.Hands({ locateFile: f => this.cfg.hands_base + f });
+      this.hands.setOptions({
+        maxNumHands: this.cfg.maxHands, modelComplexity: this.cfg.modelComplexity,
+        minDetectionConfidence: this.cfg.minDetect, minTrackingConfidence: this.cfg.minTrack });
+      this.hands.onResults(r2 => this._onResults(r2));
+ 
+      this._resetState();
+      this.running = true; this.wantOn = true;
+      this._setBtn("✋ ปิดกล้อง", true);
+      this._status("ยกมือขึ้นหน้ากล้อง");
+      this._loop();
+    } catch (err) {
+      console.error("HandGestures:", err);
+      this.stop(true);
+      if (!auto) alert("เปิดกล้องไม่สำเร็จ: " + (err && err.message ? err.message : err) +
+        "\n(ต้องเปิดผ่าน https หรือ localhost และอนุญาตกล้อง)");
+    } finally { this.starting = false; }
+  }
+ 
+  /** user=true → ผู้ใช้ปิด/ออกจากสายหน้า (ไม่เปิดคืนเองเด็ดขาด) */
+  stop(user = false) {
+    if (user) this.wantOn = false;
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+    if (this.hands) { try { this.hands.close(); } catch (e) {} }
+    this.stream = null; this.hands = null;
+    this._clearHot();
+    if (this.exitBtn) { this.exitBtn.remove(); this.exitBtn = null; }
+    if (this.backBtn) { this.backBtn.remove(); this.backBtn = null; }
+    if (this.ui) { this.ui.root.remove(); this.ui.cursor.remove(); this.ui = null; }
+    const g = GR(); if (g && g.hover) { g.hover = null; if (g.cv) g.cv.style.cursor = "grab"; }
+    this._setBtn("ควบคุมด้วยมือ");
+    this._resetState();
+  }
+ 
+  _loadMediaPipe() {
+    if (window.Hands) return Promise.resolve();
+    return new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = this.cfg.hands_js; s.crossOrigin = "anonymous";
+      s.onload = res; s.onerror = () => rej(new Error("โหลด MediaPipe ไม่สำเร็จ (เช็คอินเทอร์เน็ต)"));
+      document.head.appendChild(s);
+    });
+  }
+ 
+  /* ---------------- rAF loop (+ โหมดพัก 3 ระดับ) ---------------- */
+  async _loop() {
+    if (!this.running) return;
+    const r = RT(), c = this.cfg;
+    if (r && !CHAIN.has(r.screen)) { this.stop(true); return; }   // ออกนอกสายหน้า = ปิดกล้อง
+    const now = performance.now(), v = this.video;
+    if (v.readyState >= 2 && !this.busy && v.currentTime !== this.lastT) {
+      const gap = this.sleep === "active" ? 0 : this.sleep === "half" ? c.halfMs : c.sleepPollMs;
+      if (now - this.lastRun >= gap) {
+        this.lastRun = now; this.lastT = v.currentTime;
+        if (this.sleep === "sleep") {
+          if (this._motion()) this._setSleep("half");             // มีอะไรขยับ → ตื่นครึ่ง
+        } else {
+          this.busy = true;
+          try { await this.hands.send({ image: v }); } catch (e) {}
+          this.busy = false;
+        }
+      }
+    }
+    this._inertia();
+    this._syncChrome();
+    if (!this.cur && this.lostAt && performance.now() - this.lostAt > c.lostMs && this.ui)
+      this.ui.cursor.style.display = "none";
+    this.raf = requestAnimationFrame(() => this._loop());
+  }
+ 
+  /** เทียบภาพจิ๋ว 32×24 กับเฟรมก่อน — ถูกกว่าเรียกโมเดลมาก */
+  _motion() {
+    if (!this._mc) {
+      this._mc = document.createElement("canvas"); this._mc.width = 32; this._mc.height = 24;
+      this._mx = this._mc.getContext("2d", { willReadFrequently: true });
+    }
+    this._mx.drawImage(this.video, 0, 0, 32, 24);
+    const d = this._mx.getImageData(0, 0, 32, 24).data, n = 32 * 24, lum = new Uint8Array(n);
+    for (let i = 0; i < n; i++) lum[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11;
+    const prev = this.prevLum; this.prevLum = lum;
+    if (!prev) return false;
+    let ch = 0;
+    for (let i = 0; i < n; i++) if (Math.abs(lum[i] - prev[i]) > this.cfg.motionDiff) ch++;
+    return ch / n > this.cfg.motionFrac;
+  }
+ 
+  _setSleep(s) {
+    if (this.sleep === s) return;
+    this.sleep = s; this.stateT = performance.now();
+    if (s === "sleep") {
+      this._lost(); this.prevLum = null;
+      if (this.ui) this.ui.ctx.clearRect(0, 0, this.ui.cv.width, this.ui.cv.height);
+      this._status("💤 พักอยู่ · ขยับมือหน้ากล้องเพื่อปลุก");
+    }
+    this.emit("sleep-state", { state: s });
+  }
+ 
+  /* ---------------- results ---------------- */
+  _onResults(res) {
+    if (!this.running || !this.ui) return;
+    const hs = res.multiHandLandmarks || [], c = this.cfg, now = performance.now();
+    this._drawSkeleton(hs);
+ 
+    if (hs.length) { this.lastHandAt = now; if (this.sleep !== "active") this._setSleep("active"); }
+    else {
+      const idle = now - Math.max(this.lastHandAt, this.stateT);
+      if ((this.sleep === "active" && idle > c.activeToSleepMs) || (this.sleep === "half" && idle > c.halfToSleepMs)) {
+        this._setSleep("sleep"); return;
+      }
+    }
+ 
+    const ar = (this.video.videoWidth / this.video.videoHeight) || 1.333;
+    if (hs.length >= 2) {
+      this.twoCount++;
+      if (this.twoCount >= c.zoomStableFrames) this._twoHands(hs[0], hs[1], ar);
+      return;
+    }
+    this.twoCount = 0; this.zoom = null; this.kS = null; this.fist = { since: 0, fired: false };
+    if (hs.length === 1) { this.lostAt = 0; this._oneHand(hs[0], ar); }
+    else this._lost();
+  }
+ 
+  _lost() {
+    if (!this.lostAt) this.lostAt = performance.now();
+    this.palmFrames = 0; this._endPan(); this._idleCursor();
+    this._setMode("none"); this._status("ยกมือขึ้นหน้ากล้อง");
+  }
+ 
+  /** แปลงจุดในภาพกล้อง (กลับซ้ายขวา) → พิกัดหน้าต่างเบราว์เซอร์ */
+  _map(p) {
+    const R = this.cfg.region;
+    return {
+      x: clamp(((1 - p.x) - R.x0) / (R.x1 - R.x0), 0, 1) * window.innerWidth,
+      y: clamp((p.y - R.y0) / (R.y1 - R.y0), 0, 1) * window.innerHeight,
+    };
+  }
+ 
+  /** อยู่หน้ากราฟและไม่มีหน้าฝึกฎีกาเต็มจอทับอยู่ */
+  _inGraph() {
+    const r = RT();
+    return !!(r && r.screen === "screen-graph" && !document.getElementById("dq-ov"));
+  }
+ 
+  /* ---------------- มือเดียว ---------------- */
+  _oneHand(lm, ar) {
+    const g = GR(); if (!g) return;
+    const now = performance.now(), c = this.cfg;
+ 
+    const fs = fingerStates(lm, ar);
+    const idxExt = d2(lm[8], lm[0], ar) > d2(lm[6], lm[0], ar) * c.extendRatio;
+    const isOpen = fs.ext === 4;
+    const isPoint = idxExt && fs.ext <= 2 && !isOpen;
+ 
+    // 🖐 ฝ่ามือเปิด → เลื่อน
+    this.palmFrames = isOpen ? this.palmFrames + 1 : 0;
+    if (this.palmFrames >= c.palmFrames || (this.pan.active && isOpen)) return this._palm(lm, now);
+    this._endPan();
+ 
+    // ☝️ ชี้ → เคอร์เซอร์ + dwell
+    if (!isPoint) {
+      this._idleCursor();
+      this._setMode("idle");
+      this._status("☝️ ชี้นิ้วเดียวเพื่อเล็ง · 🖐 โบกฝ่ามือ=เลื่อน");
+      return;
+    }
+    const tip = this._map(lm[8]);
+    if (!this.wasPoint) { this.fx.reset(); this.fy.reset(); this.wasPoint = true; this._resetDwell(); }
+    this.cur = { x: this.fx.filter(tip.x, now), y: this.fy.filter(tip.y, now) };
+ 
+    const t = this._targetAt(this.cur.x, this.cur.y);
+    this._hover(t);
+    const d = this._dwell(t, now);
+    this._moveCursor(d.p, d.locked);
+    this._setMode("point");
+    this._status(d.locked ? "⏳ รอสักครู่…"
+      : d.p > 0 ? "☝️ ค้างไว้… วงกลมเต็ม = คลิก"
+      : "☝️ ชี้ค้างเพื่อคลิก · 🖐 โบกฝ่ามือ=เลื่อน");
+  }
+ 
+  /* ----- เป้าหมายใต้เคอร์เซอร์ ----- */
+  _targetAt(x, y) {
+    if (this._inGraph()) {
+      const g = GR(), rect = g.cv.getBoundingClientRect(), eb = this.exitBtn;
+      if (eb && eb.style.display !== "none") {
+        const r = eb.getBoundingClientRect();
+        const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+        if (d < this.cfg.magnetPx) return { kind: "dom", el: eb };
+      }
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        const node = this._nearestNode(x - rect.left, y - rect.top);
+        return { kind: node ? "node" : "canvas", node };
+      }
+    }
+    const el = this._nearestClickable(x, y);
+    return el ? { kind: "dom", el } : { kind: "none" };
+  }
+ 
+  _nearestNode(px, py) {
+    const g = GR(); if (!g || !g.tf) return null;
+    const k = g.tf.k, M = this.cfg.nodeMagnetPx, L = g.layout;
+    let best = null, bd = Infinity;
+    for (const n of g.nodes) {
+      if (n.x == null) continue;
+      if (L) { const al = L.alphaOf(n); if (al != null && al < 0.3) continue; }   // โหนดที่จางอยู่ไม่ให้ดูด
+      const d = Math.hypot(n.x * k + g.tf.x - px, n.y * k + g.tf.y - py) - n.r * k;
+      if (d < M && d < bd) { bd = d; best = n; }
+    }
+    return best;
+  }
+ 
+  /** ปุ่มที่ชี้ค้างแล้วจะเสียหาย/ทำงานไม่ได้ (ใช้ confirm / เลือกไฟล์ของเบราว์เซอร์) */
+  _skip(el) {
+    return el.hasAttribute("data-hg-skip") || /dqReset|dqImport/.test(el.getAttribute("onclick") || "");
+  }
+ 
+  _nearestClickable(x, y) {
+    const now = performance.now();
+    if (now - this._clkT > 150) {
+      const ov = document.getElementById("dq-ov");
+      const root = ov || document.querySelector(".screen.active");
+      const set = new Set();
+      if (root) root.querySelectorAll(CLICKABLE).forEach(e => set.add(e));
+      document.querySelectorAll("[data-hg]").forEach(e => set.add(e));
+      this._clk = [...set].filter(el => !el.disabled && el.getClientRects().length && !this._skip(el));
+      this._clkT = now;
+    }
+    let best = null, bd = Infinity;
+    for (const el of this._clk) {
+      const r = el.getBoundingClientRect();
+      const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+      if (d < this.cfg.magnetPx && d < bd) { bd = d; best = el; }
+    }
+    return best;
+  }
+ 
+  _keyOf(t) { return t.kind === "node" ? t.node : t.kind === "dom" ? t.el : null; }
+ 
+  _hover(t) {
+    const g = GR();
+    if (g && g.cv && this._inGraph()) {
+      const hn = t.kind === "node" ? t.node : null;
+      if (hn !== g.hover) { g.hover = hn; g.cv.style.cursor = hn ? "pointer" : "grab"; drawGraph(); }
+    }
+    const hot = t.kind === "dom" ? t.el : null;
+    if (hot !== this.hot) {
+      if (this.hot) this.hot.classList.remove("hg-hot");
+      if (hot) hot.classList.add("hg-hot");
+      this.hot = hot;
+    }
+  }
+  _clearHot() { if (this.hot) { this.hot.classList.remove("hg-hot"); this.hot = null; } }
+ 
+  /* ----- ชี้ค้าง (dwell) ----- */
+  _resetDwell() { this.dwell.key = null; this.dwell.t0 = 0; }
+ 
+  _dwell(t, now) {
+    const D = this.dwell, c = this.cfg, g = GR(), L = g && g.layout;
+    const animating = !!(L && L.timer);                        // เลย์เอาต์กำลังคลี่/เก็บ = ยังไม่นับ
+    if (now < D.lockUntil || animating) { this._resetDwell(); return { p: 0, locked: true }; }
+ 
+    const key = this._keyOf(t);
+    if (D.lastKey && key !== D.lastKey) D.lastKey = null;      // ขยับออกจากปุ่มเดิมแล้ว
+    if (!key || key === D.lastKey) { this._resetDwell(); return { p: 0 }; }
+    if (key !== D.key) { D.key = key; D.t0 = now; return { p: 0 }; }
+ 
+    const p = (now - D.t0) / c.dwellMs;
+    if (p >= 1) {
+      this._activate(t);
+      this._resetDwell();
+      D.lockUntil = now + (t.kind === "dom" ? c.lockDomMs : c.lockNodeMs);
+      return { p: 0, locked: true };
+    }
+    return { p: p > 0.12 ? p : 0 };
+  }
+ 
+  _activate(t) {
+    const g = GR();
+    if (t.kind === "dom") {
+      const el = t.el;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && el.type !== "checkbox" && el.type !== "radio") el.focus();
+      else el.click();
+      this.dwell.lastKey = el;
+      this.emit("ui-click", { el });
+    } else if (t.kind === "node") {
+      const n = t.node;
+      if (g.sel === n) this._open(n);                          // เลือกอยู่แล้ว + ชี้ค้างอีก = เปิด
+      else { selectNode(n); this.emit("node-select", { node: n }); }
+    }
+  }
+ 
+  /** เปิดมาตรา → Flash Card, ฎีกา → หน้าฎีกา */
+  _open(node) {
+    if (node.type === "section") {
+      const r = (node.refs || [])[0];
+      if (r) jumpToCardIn(r.catKey, r.cardIdx);
+    } else if (node.type === "deka") {
+      jumpToDekaIn(node.ref.catKey, node.ref.dekaIdx);
+    } else return;
+    this.emit("node-open", { node });
+  }
+ 
+  _idleCursor() {
+    this.cur = null; this.wasPoint = false; this._resetDwell(); this._clearHot();
+    if (this.ui) this.ui.cursor.style.display = "none";
+    const g = GR(); if (g && g.hover) { g.hover = null; if (g.cv) g.cv.style.cursor = "grab"; drawGraph(); }
+  }
+ 
+  /* ----- 🖐 โบกฝ่ามือ: เลื่อนกราฟ (ในกรอบกราฟ) หรือเลื่อนหน้า (นอกกรอบ) ----- */
+  _palm(lm, now) {
+    const c = this.cfg, P = this.pan, p = this._map(lm[9]);
+    const x = this.pfx.filter(p.x, now), y = this.pfy.filter(p.y, now);
+    if (!P.active) {
+      P.active = true; P.lx = x; P.ly = y; P.vx = P.vy = 0;
+      const g = GR();
+      let inCanvas = false;
+      if (this._inGraph() && g && g.cv) {
+        const r = g.cv.getBoundingClientRect();
+        inCanvas = p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom;
+      }
+      P.mode = inCanvas ? "graph" : "scroll";
+      this._idleCursor();
+    } else {
+      let dx = (x - P.lx) * c.panGain, dy = (y - P.ly) * c.panGain;
+      P.lx = x; P.ly = y;
+      if (Math.hypot(dx, dy) < c.panDead) dx = dy = 0;         // กันมือสั่น
+      P.vx += (dx - P.vx) * c.velEma; P.vy += (dy - P.vy) * c.velEma;
+      this._move(P.vx, P.vy);                                  // ปัดไปทิศไหน เลื่อนตามไปทิศนั้น
+    }
+    this._setMode("pan");
+    this._status(P.mode === "graph" ? "🖐 กราฟเลื่อนตามมือ" : "🖐 หน้าเลื่อนตามมือ");
+  }
+ 
+  _move(dx, dy) {
+    if (this.pan.mode === "graph") this._panBy(dx, dy);
+    else {
+      const ov = document.getElementById("dq-ov");
+      if (ov) ov.scrollTop -= dy; else window.scrollBy(0, -dy);
+    }
+  }
+ 
+  /** เลื่อนกราฟแบบเงียบ: ไม่ให้ onZoom() สลับ/ออก Focus เองระหว่างเลื่อน */
+  _panBy(dx, dy) {
+    const g = GR(); if (!g || !g.zoom || !g.tf) return;
+    const q = g.quiet; g.quiet = true;
+    d3.select(g.cv).call(g.zoom.translateBy, dx / g.tf.k, dy / g.tf.k);
+    g.quiet = q;
+    this.emit("graph-pan", { dx, dy });
+  }
+ 
+  _endPan() {
+    if (this.pan.active) { this.pan.active = false; this.pfx.reset(); this.pfy.reset(); }   // เก็บ vx,vy ไว้ให้ inertia
+  }
+ 
+  _inertia() {
+    const P = this.pan;
+    if (P.active || (Math.abs(P.vx) < this.cfg.inertiaMin && Math.abs(P.vy) < this.cfg.inertiaMin)) {
+      if (!P.active) P.vx = P.vy = 0; return;
+    }
+    this._move(P.vx * 0.5, P.vy * 0.5);    // ผลลัพธ์กล้อง ~30fps, rAF ~60fps
+    P.vx *= this.cfg.inertiaDecay; P.vy *= this.cfg.inertiaDecay;
+  }
+ 
+  /* ----- 🙌 สองมือ: ซูม / ✊✊ Overview (เฉพาะหน้ากราฟ) ----- */
+  _twoHands(a, b, ar) {
+    this._idleCursor(); this._endPan(); this.palmFrames = 0; this.pan.vx = this.pan.vy = 0;
+    const g = GR();
+    if (!this._inGraph() || !g || !g.cv || !g.zoom || !g.tf) {
+      this._setMode("idle"); this._status("🙌 สองมือใช้ได้ในหน้ากราฟ"); return;
+    }
+    const fa = fingerStates(a, ar), fb = fingerStates(b, ar), now = performance.now();
+    if (fa.curl >= 3 && fb.curl >= 3) {
+      this.zoom = null; this.kS = null;
+      if (!this.fist.since) this.fist.since = now;
+      const held = now - this.fist.since;
+      if (!this.fist.fired && held >= this.cfg.fistHoldMs) { this.fist.fired = true; this.overview(); }
+      this._setMode("overview");
+      this._status(this.fist.fired ? "✊✊ Overview" : `✊✊ ค้างไว้… ${Math.min(100, Math.round(held / this.cfg.fistHoldMs * 100))}%`);
+      return;
+    }
+    this.fist = { since: 0, fired: false };
+ 
+    const dist = Math.sqrt(d2(a[9], b[9], ar));
+    if (!this.zoom) { this.zoom = { d0: Math.max(dist, 0.05), k0: g.tf.k }; this.kS = g.tf.k; }
+    const target = clamp(this.zoom.k0 * (dist / this.zoom.d0), 0.15, 8);
+    this.kS += (target - this.kS) * this.cfg.zoomAlpha;
+    if (Math.abs(Math.log(this.kS / g.tf.k)) > this.cfg.zoomDeadband) {
+      const prev = g.tf.k;
+      d3.select(g.cv).call(g.zoom.scaleTo, this.kS);
+      this.emit("graph-zoom", { k: g.tf.k, delta: g.tf.k / prev });
+    }
+    const act = g.tf.k >= this.cfg.fermatK;
+    if (act !== this.fermat) { this.fermat = act; this.emit("layout-fermat", { active: act, k: g.tf.k }); }
+    this._setMode("zoom");
+    this._status(`🙌 Zoom ×${g.tf.k.toFixed(2)}${act ? " · Fermat" : ""} · ✊✊=Overview`);
+  }
+ 
+  /** ออกจาก Focus + ซูม fit ทั้งกราฟ */
+  overview() {
+    const g = GR(); if (!g || !g.cv || !g.zoom) return;
+    g.pulse = null;
+    try { selectNode(null, { quiet: true }); } catch (e) {}
+    const ns = g.nodes.filter(n => n.x != null); if (!ns.length) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const n of ns) { if (n.x < x0) x0 = n.x; if (n.x > x1) x1 = n.x; if (n.y < y0) y0 = n.y; if (n.y > y1) y1 = n.y; }
+    const k = clamp(Math.min(g.w / (x1 - x0 + 80), g.h / (y1 - y0 + 80)), 0.15, 1.2);
+    const t = d3.zoomIdentity.translate(g.w / 2 - (x0 + x1) / 2 * k, g.h / 2 - (y0 + y1) / 2 * k).scale(k);
+    const q = g.quiet; g.quiet = true;
+    d3.select(g.cv).transition().duration(this.cfg.overviewMs).call(g.zoom.transform, t)
+      .on("end interrupt", () => { g.quiet = q; });
+    this.fermat = false;
+    this.emit("graph-overview", { k });
+  }
+ 
+  /* ---------------- ปุ่มลอย: ✕ ออกจากตัวเลือก / ← ย้อนกลับ ---------------- */
+  _syncChrome() {
+    const g = GR(), r = RT(), ov = !!document.getElementById("dq-ov");
+    const inG = !!(r && r.screen === "screen-graph" && !ov);
+    if (this.exitBtn) {
+      const L = g && g.layout;
+      const d = (inG && ((L && L.mode === "focus") || (g && g.sel))) ? "block" : "none";
+      if (this.exitBtn.style.display !== d) this.exitBtn.style.display = d;
+    }
+    if (this.backBtn) {
+      const d = (r && r.screen !== "screen-graph" && !ov) ? "block" : "none";
+      if (this.backBtn.style.display !== d) this.backBtn.style.display = d;
+    }
+  }
+ 
+  /* ---------------- UI ---------------- */
+  _buildUI() {
+    if (!document.getElementById("hg-css")) {
+      const st = document.createElement("style"); st.id = "hg-css";
+      st.textContent = ".hg-hot{outline:3px solid #f59e0b !important;outline-offset:2px;border-radius:8px;}";
+      document.head.appendChild(st);
+    }
+    // จอพรีวิว: แสดงเฉพาะโครงมือบนพื้นมืด (ซ่อนภาพกล้อง) มุมขวาล่าง เหนือปุ่มลอย
+    const root = document.createElement("div");
+    root.style.cssText = "position:fixed;right:12px;bottom:84px;z-index:900;width:120px;border-radius:12px;overflow:hidden;pointer-events:none;" +
+      "background:#0f172a;box-shadow:0 8px 24px rgba(0,0,0,.4);border:1px solid #334155;font:10px Sarabun,sans-serif;color:#e2e8f0;";
+    root.innerHTML = `
+      <div style="position:relative;width:120px;height:90px;">
+        <video playsinline muted style="position:absolute;inset:0;width:100%;height:100%;opacity:.01;pointer-events:none;"></video>
+        <canvas width="120" height="90" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+      </div>
+      <div class="hg-status" style="padding:4px 6px;line-height:1.35;min-height:2.7em;"></div>
+      <button type="button" data-hg class="hg-close" style="pointer-events:auto;display:block;width:100%;border:none;border-top:1px solid #334155;background:#1e293b;color:#e2e8f0;padding:6px;font:700 11px Sarabun,sans-serif;cursor:pointer;">✕ ปิดกล้อง</button>`;
+    document.body.appendChild(root);
+    root.querySelector(".hg-close").onclick = () => this.stop(true);
+ 
+    const cursor = document.createElement("div");
+    cursor.style.cssText = "position:fixed;left:0;top:0;z-index:950;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;" +
+      "pointer-events:none;display:none;border:3px solid #f59e0b;background:rgba(245,158,11,.25);transition:transform .12s;";
+    document.body.appendChild(cursor);
+ 
+    // ✕ ออกจากตัวเลือก (ในกรอบกราฟ มุมขวาบน)
+    const wrap = document.getElementById("graph-wrap");
+    if (wrap) {
+      const b = document.createElement("button");
+      b.id = "hg-exit"; b.type = "button"; b.setAttribute("data-hg", ""); b.textContent = "✕ ออกจากตัวเลือก";
+      b.style.cssText = "position:absolute;top:10px;right:10px;z-index:5;display:none;padding:10px 16px;border:none;border-radius:999px;" +
+        "background:var(--primary);color:#fff;font:700 .9rem Sarabun,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);";
+      b.onclick = () => { try { selectNode(null); } catch (e) {} };
+      wrap.appendChild(b);
+      this.exitBtn = b;
+    }
+ 
+    // ← ย้อนกลับ (หน้า Flash Card / ฎีกา)
+    const bb = document.createElement("button");
+    bb.id = "hg-back"; bb.type = "button"; bb.setAttribute("data-hg", ""); bb.textContent = "← ย้อนกลับ";
+    bb.style.cssText = "position:fixed;top:76px;left:12px;z-index:900;display:none;padding:10px 16px;border:none;border-radius:999px;" +
+      "background:var(--primary);color:#fff;font:700 .9rem Sarabun,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);";
+    bb.onclick = () => { try { goBack(() => go({ screen: "screen-graph" })); } catch (e) {} };
+    document.body.appendChild(bb);
+    this.backBtn = bb;
+ 
+    this.video = root.querySelector("video");
+    this.ui = { root, cursor, cv: root.querySelector("canvas"), status: root.querySelector(".hg-status") };
+    this.ui.ctx = this.ui.cv.getContext("2d");
+  }
+ 
+  _moveCursor(p, locked) {
+    const c = this.ui.cursor;
+    c.style.display = "block"; c.style.left = this.cur.x + "px"; c.style.top = this.cur.y + "px";
+    c.style.transform = p > 0 ? "scale(1.25)" : "scale(1)";
+    c.style.borderColor = locked ? "#94a3b8" : p > 0 ? "#22c55e" : "#f59e0b";
+    c.style.background = p > 0 ? `conic-gradient(#22c55e ${Math.round(p * 100)}%, rgba(245,158,11,.25) 0)`
+      : locked ? "rgba(148,163,184,.25)" : "rgba(245,158,11,.25)";
+  }
+ 
+  _drawSkeleton(hs) {
+    const { ctx, cv } = this.ui, W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineWidth = 2; ctx.strokeStyle = "rgba(129,140,248,.95)"; ctx.fillStyle = "#fbbf24";
+    for (const lm of hs) {
+      ctx.beginPath();
+      for (const [i, j] of CONNECTIONS) { ctx.moveTo((1 - lm[i].x) * W, lm[i].y * H); ctx.lineTo((1 - lm[j].x) * W, lm[j].y * H); }
+      ctx.stroke();
+      for (const i of [4, 8]) { ctx.beginPath(); ctx.arc((1 - lm[i].x) * W, lm[i].y * H, 3, 0, 6.2832); ctx.fill(); }
+    }
+  }
+ 
+  _setMode(m) { if (m !== this.mode) { this.mode = m; this.emit("hand-state", { mode: m }); } }
+  _status(t) { if (this.ui) this.ui.status.textContent = t; }
+  _setBtn(label, on) {
+    const b = document.getElementById("hand-toggle");
+    if (b) { b.textContent = label; b.classList.toggle("btn-primary", !!on); b.classList.toggle("btn-secondary", !on); }
+  }
+}
+ 
+
+ 
+ 
+/* ============================================================================
+   GraphFullscreen — ปุ่มขยายหน้า Graph เต็มจอ
+   - ขอ Fullscreen API ที่ documentElement (cursor/พรีวิวกล้องที่อยู่บน body จึงยังเห็น)
+   - มี fallback เป็น CSS เต็มจอ สำหรับ iPhone Safari ที่ไม่รองรับ Fullscreen API
+   ========================================================================== */
+class GraphFullscreen {
+  constructor() { this.on = false; this.native = false; this._css = false; }
+  get block() { return document.querySelector("#screen-graph .content-block"); }
+
+  _injectCSS() {
+    if (this._css) return; this._css = true;
+    const st = document.createElement("style");
+    st.textContent = `
+      body.gfs-lock{overflow:hidden;}
+      #screen-graph .content-block.gfs{
+        position:fixed;inset:0;z-index:800;margin:0;border-radius:0;box-sizing:border-box;
+        padding:calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px))
+                calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px)) !important;
+        display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
+      .gfs #graph-wrap{height:auto !important;flex:1 1 auto;min-height:0;}
+      .gfs #graph-info{flex:none;max-height:26vh;overflow:auto;}`;
+    document.head.appendChild(st);
+  }
+
+  toggle() { return this.on ? this.exit() : this.enter(); }
+
+  async enter() {
+    const b = this.block; if (!b || this.on) return;
+    this._injectCSS();
+    b.classList.add("gfs"); document.body.classList.add("gfs-lock"); this.on = true;
+    try {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+        this.native = true;
+      }
+    } catch (e) { /* ใช้ CSS fallback */ }
+    this._btn(); this._resize();
+  }
+
+  exit() {
+    const b = this.block; if (!this.on) return;
+    if (b) b.classList.remove("gfs");
+    document.body.classList.remove("gfs-lock"); this.on = false;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    this.native = false; this._btn(); this._resize();
+  }
+
+  _btn() {
+    const el = document.getElementById("graph-fs-btn");
+    if (el) el.textContent = this.on ? "⤡ ออกเต็มจอ" : "⛶ เต็มจอ";
+  }
+  // ให้ onGraphResize() ของ ANANLEX คำนวณขนาด canvas ใหม่ (รอ transition ของ fullscreen)
+  _resize() { [60, 350].forEach(ms => setTimeout(() => window.dispatchEvent(new Event("resize")), ms)); }
+}
+
+export const handGestures = new HandGestureController();
+export const graphFullscreen = new GraphFullscreen();
+window.HandGestures = handGestures;
+window.GraphFullscreen = graphFullscreen;
+
+/* ---- ผูกกับวงจรหน้า: ออกจากหน้ากราฟ → ออกเต็มจอ / กลับเข้ามา → เปิดกล้องต่อถ้าผู้ใช้เปิดไว้ ---- */
+const gs = document.getElementById("screen-graph");
+if (gs) new MutationObserver(() => {
+  const active = gs.classList.contains("active");
+  if (!active && graphFullscreen.on) graphFullscreen.exit();
+  if (active && handGestures.wantOn && !handGestures.running) handGestures.start({ auto: true });
+}).observe(gs, { attributes: true, attributeFilter: ["class"] });
+
+document.addEventListener("fullscreenchange", () => {
+  if (graphFullscreen.on && graphFullscreen.native && !document.fullscreenElement) graphFullscreen.exit();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && graphFullscreen.on) graphFullscreen.exit(); });
 </script>
 </body>
 </html>
