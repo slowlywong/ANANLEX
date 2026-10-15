@@ -1722,7 +1722,30 @@ function jumpToDekaIn(catKey, dekaIdx) {
 function jumpToCardIn(catKey, cardIdx) {
   go({ screen: "screen-flash", catKey, cardIdx, pageIdx: 0, flashTab: "keyword" });
 }
+// "420", "ม.420", "มาตรา 420", "224/1", "277 ทวิ" → เลขมาตรา; ถ้าไม่ใช่แท็กมาตราจะได้ null
+function tagSection(t) {
+  const x = toArabic(String(t)).trim();
+  const m = x.match(/^(?:ม\.|มาตรา)?\s*(\d+(?:\/\d+)?(?:\s*(?:ทวิ|ตรี|จัตวา))?)$/);
+  return m ? m[1].replace(/\s+/g, " ").trim() : null;
+}
 
+// เปิด Flash Card ของมาตรานั้นทันที (หาในวิชาปัจจุบันก่อน แล้วค่อยหาข้ามวิชา)
+function openSectionCard(sec) {
+  const s = toArabic(String(sec)).trim();
+  const keys = [route.catKey, ...Object.keys(DATA.categories).filter(k => k !== route.catKey)];
+  for (const k of keys) {
+    const cards = (DATA.categories[k] || {}).flashCards || [];
+    const idx = cards.findIndex(c => toArabic(String(c.section)).trim() === s);
+    if (idx >= 0) return jumpToCardIn(k, idx);
+  }
+  quickSearchFlash(s);   // ไม่พบการ์ด ให้ใช้ค้นหาแทน
+}
+
+// คลิกแท็ก: เลขมาตรา → Flash Card, คำอื่น → ค้นหาฎีกาเหมือนเดิม
+function onDekaTagClick(t) {
+  const sec = tagSection(t);
+  if (sec) openSectionCard(sec); else quickSearchDeka(t);
+}
 function viewSectionInGraph() {
   const card = ((DATA.categories[route.catKey] || {}).flashCards || [])[route.cardIdx];
   if (!card) return;
@@ -2948,7 +2971,7 @@ function buildDekaItems(cat) {
   document.getElementById("deka-items").innerHTML = (cat.dekaList || []).map((d, i) => `
     <button type="button" class="content-block" style="cursor:pointer;display:block;width:100%;text-align:left;border:none;" onclick="jumpToDeka(${i})">
       <div style="font-weight:bold;">${escHTML(d.title)}</div>
-      <div style="margin-top:6px;">${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="event.stopPropagation(); quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${escHTML(t)}</span>`).join(" ")}</div>
+      <div style="margin-top:6px;">${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="event.stopPropagation(); onDekaTagClick('${escJS(t)}')" title="${tagSection(t) ? 'ไปที่ Flash Card มาตรานี้' : 'ค้นหาคำนี้'}">${escHTML(t)}</span>`).join(" ")}</div>
       <div style="font-size:0.85rem;color:var(--text-sub);margin-top:8px;">${nl(d.principle)}</div>
     </button>`).join("") || `<p style="color:var(--text-sub);">ยังไม่มีฎีกาสำหรับวิชานี้</p>`;
 }
@@ -2979,7 +3002,7 @@ function viewDekaRender(cat) {
   document.getElementById("deka-content").innerHTML = `
     <div class="deka-card">
       <h2 style="margin-top:0;font-size:1.1rem;">${escHTML(d.title)}</h2>
-      <div>${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="quickSearchDeka('${escJS(t)}')" title="ค้นหาคำนี้">${escHTML(t)}</span>`).join(" ")}</div>
+      <div>${(d.tags||[]).map(t => `<span class="tag tag-blue clickable" onclick="onDekaTagClick('${escJS(t)}')" title="${tagSection(t) ? 'ไปที่ Flash Card มาตรานี้' : 'ค้นหาคำนี้'}">${escHTML(t)}</span>`).join(" ")}</div>
      ${d.statute && d.statute.trim() !== "" && d.statute.trim() !== "(" ? `
       <div class="deka-section-label">📜 ตัวบทย่อ</div>
       <div class="deka-principle-box">${nl(d.statute)}</div>
